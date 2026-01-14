@@ -9,9 +9,14 @@ export interface Tournament {
   skins_enabled: boolean;
   skins_buy_in: number;
   skins_type: string;
+  skins_carryover: boolean;
   show_handicaps: boolean;
   show_quotas: boolean;
   stableford_points: StablefordPoints;
+  leaderboard_settings?: {
+    tabs: ('gross' | 'stableford' | 'skins')[];
+    hidden: ('gross' | 'stableford' | 'skins')[];
+  };
   created_at: string;
   updated_at: string;
 }
@@ -82,6 +87,7 @@ export interface LeaderboardEntry {
   vsQuota: number;
   holesPlayed: number;
   isComplete: boolean;
+}
 
 export interface SavedCourse {
   id: string;

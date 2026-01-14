@@ -223,7 +223,7 @@ export default function PlayerManagement() {
     }
   };
 
-  const handleBulkImport = () => {
+  const handleBulkImport = async () => {
     const csvText = prompt(
       'Paste CSV data (Name, Handicap):\nExample:\nJohn Smith, 12\nJane Doe, 8'
     );
@@ -243,18 +243,19 @@ export default function PlayerManagement() {
       };
     });
 
-    supabase
-      .from('players')
-      .insert(playersToAdd)
-      .then(({ error }) => {
-        if (error) throw error;
-        alert(`Added ${playersToAdd.length} players`);
-        loadData();
-      })
-      .catch(error => {
-        console.error('Error importing players:', error);
-        alert('Failed to import players');
-      });
+    try {
+      const { error } = await supabase
+        .from('players')
+        .insert(playersToAdd);
+
+      if (error) throw error;
+      
+      alert(`Added ${playersToAdd.length} players`);
+      loadData();
+    } catch (error: any) {
+      console.error('Error importing players:', error);
+      alert('Failed to import players');
+    }
   };
 
   if (loading) {
@@ -542,7 +543,8 @@ export default function PlayerManagement() {
           })}
         </div>
       )}
-{players.length > 0 && (
+
+      {players.length > 0 && (
         <div className="mt-8 flex justify-end gap-2">
           <Link
             to={`/admin/tournament/${id}/flights`}

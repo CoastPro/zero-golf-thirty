@@ -107,7 +107,7 @@ export default function SavedPlayers() {
     }
   };
 
-  const handleBulkImport = () => {
+  const handleBulkImport = async () => {
     const csvText = prompt(
       'Paste CSV data (Name, Handicap):\nExample:\nJohn Smith, 12\nJane Doe, 8'
     );
@@ -123,18 +123,19 @@ export default function SavedPlayers() {
       };
     });
 
-    supabase
-      .from('saved_players')
-      .insert(playersToAdd)
-      .then(({ error }) => {
-        if (error) throw error;
-        alert(`Added ${playersToAdd.length} players`);
-        loadPlayers();
-      })
-      .catch(error => {
-        console.error('Error importing players:', error);
-        alert('Failed to import players');
-      });
+    try {
+      const { error } = await supabase
+        .from('saved_players')
+        .insert(playersToAdd);
+
+      if (error) throw error;
+      
+      alert(`Added ${playersToAdd.length} players`);
+      loadPlayers();
+    } catch (error: any) {
+      console.error('Error importing players:', error);
+      alert('Failed to import players');
+    }
   };
 
   if (loading) {
