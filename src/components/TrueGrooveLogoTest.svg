@@ -1,0 +1,25 @@
+<svg width="784" height="532" viewBox="0 0 784 532" xmlns="http://www.w3.org/2000/svg">
+  <rect width="784" height="532" fill="white"/>
+  
+  <!-- TRUEGROOVE -->
+  <g transform="translate(115, 207)">
+    <polygon points="0,0 71,0 71,25 48,25 48,83 22,83 22,25 0,25" fill="black" transform="skewX(-10)"/>
+    <path d="M80,18 h45 q7,0 11,4 q4,4 4,11 q0,5 -3,9 q-3,4 -8,6 l20,20 h-31 l-15,-17 h-1 v17 h-24 v-65 zm24,16 v19 h16 q3,0 5,-2 q2,-2 2,-5 q0,-3 -2,-5 q-2,-2 -5,-2 h-16 z" fill="black" transform="skewX(-10)"/>
+    <path d="M160,18 h26 v33 q0,4 2,6 q2,2 6,2 q4,0 6,-2 q2,-2 2,-6 v-33 h26 v33 q0,9 -5,15 q-5,6 -13,6 h-14 q-8,0 -13,-6 q-5,-6 -5,-15 v-33 z" fill="black" transform="skewX(-10)"/>
+    <path d="M250,18 h59 v17 h-34 v7 h29 v15 h-29 v9 h34 v17 h-59 v-65 z" fill="black" transform="skewX(-10)"/>
+    <path d="M320,0 h70 l20,18 v29 l-20,18 h-27 v-15 h22 q4,0 7,-2 q3,-2 3,-6 v-11 q0,-4 -3,-6 q-3,-2 -7,-2 h-43 v53 h26 v-15 h26 v30 h-74 v-83 z" fill="black" transform="skewX(-10)"/>
+    <path d="M408,18 h45 q7,0 11,4 q4,4 4,11 q0,5 -3,9 q-3,4 -8,6 l20,20 h-31 l-15,-17 h-1 v17 h-24 v-65 zm24,16 v19 h16 q3,0 5,-2 q2,-2 2,-5 q0,-3 -2,-5 q-2,-2 -5,-2 h-16 z" fill="black" transform="skewX(-10)"/>
+    <path d="M489,18 h55 q8,0 13,5 q5,5 5,13 v9 q0,8 -5,13 q-5,5 -13,5 h-55 q-8,0 -13,-5 q-5,-5 -5,-13 v-9 q0,-8 5,-13 q5,-5 13,-5 zm0,17 q-1,0 -2,1 q-1,1 -1,2 v11 q0,1 1,2 q1,1 2,1 h55 q1,0 2,-1 q1,-1 1,-2 v-11 q0,-1 -1,-2 q-1,-1 -2,-1 h-55 z" fill="black" transform="skewX(-10)"/>
+    <path d="M582,18 h55 q8,0 13,5 q5,5 5,13 v9 q0,8 -5,13 q-5,5 -13,5 h-55 q-8,0 -13,-5 q-5,-5 -5,-13 v-9 q0,-8 5,-13 q5,-5 13,-5 zm0,17 q-1,0 -2,1 q-1,1 -1,2 v11 q0,1 1,2 q1,1 2,1 h55 q1,0 2,-1 q1,-1 1,-2 v-11 q0,-1 -1,-2 q-1,-1 -2,-1 h-55 z" fill="black" transform="skewX(-10)"/>
+    <path d="M675,18 h28 l17,48 l17,-48 h28 l-27,65 h-36 l-27,-65 z" fill="black" transform="skewX(-10)"/>
+    <path d="M775,18 h59 v17 h-34 v7 h29 v15 h-29 v9 h34 v17 h-59 v-65 z" fill="black" transform="skewX(-10)"/>
+  </g>
+  
+  <!-- Lines and GOLF -->
+  <line x1="160" y1="315" x2="285" y2="315" stroke="black" stroke-width="4"/>
+  <line x1="505" y1="315" x2="630" y2="315" stroke="black" stroke-width="4"/>
+  
+  <g transform="translate(295, 295) skewX(-10)">
+    <text x="0" y="30" font-family="Arial, sans-serif" font-weight="bold" font-size="32" fill="black" letter-spacing="8">GOLF</text>
+  </g>
+</svg>
