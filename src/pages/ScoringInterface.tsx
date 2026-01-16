@@ -22,6 +22,28 @@ export default function ScoringInterface() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Load saved hole from localStorage on mount
+  useEffect(() => {
+    if (id && groupIdParam) {
+      const storageKey = `scoring_hole_${id}_${groupIdParam}`;
+      const savedHole = localStorage.getItem(storageKey);
+      if (savedHole) {
+        const hole = parseInt(savedHole);
+        if (hole >= 1 && hole <= 18) {
+          setCurrentHole(hole);
+        }
+      }
+    }
+  }, [id, groupIdParam]);
+
+  // Save current hole to localStorage whenever it changes
+  useEffect(() => {
+    if (id && groupIdParam) {
+      const storageKey = `scoring_hole_${id}_${groupIdParam}`;
+      localStorage.setItem(storageKey, currentHole.toString());
+    }
+  }, [currentHole, id, groupIdParam]);
+
   useEffect(() => {
     loadData();
   }, [id, groupIdParam]);
@@ -185,7 +207,16 @@ export default function ScoringInterface() {
   };
 
   const nextHole = () => {
-    if (currentHole < 18) setCurrentHole(currentHole + 1);
+    if (currentHole < 18) {
+      setCurrentHole(currentHole + 1);
+    } else {
+      // If on hole 18 and clicking next, reset to hole 1
+      setCurrentHole(1);
+      if (id && groupIdParam) {
+        const storageKey = `scoring_hole_${id}_${groupIdParam}`;
+        localStorage.setItem(storageKey, '1');
+      }
+    }
   };
 
   if (loading) {
@@ -274,8 +305,7 @@ export default function ScoringInterface() {
 
             <button
               onClick={nextHole}
-              disabled={currentHole === 18}
-              className="p-3 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-3 bg-gray-100 hover:bg-gray-200 rounded-lg"
             >
               <ChevronRight className="w-6 h-6" />
             </button>
