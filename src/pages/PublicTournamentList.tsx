@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy, BarChart3, Calendar } from 'lucide-react';
+import { Trophy, BarChart3, Calendar, Edit } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Tournament } from '../types/database.types';
 
@@ -62,10 +62,9 @@ export default function PublicTournamentList() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {tournaments.map((tournament) => (
-              <Link
+              <div
                 key={tournament.id}
-                to={`/tournament/${tournament.id}/leaderboard`}
-                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all transform hover:scale-105 overflow-hidden"
+                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow overflow-hidden"
               >
                 <div className="bg-gradient-to-r from-green-600 to-green-500 p-6 text-white">
                   <h3 className="text-2xl font-bold mb-2">{tournament.name}</h3>
@@ -76,18 +75,33 @@ export default function PublicTournamentList() {
                 
                 <div className="p-6">
                   {tournament.tournament_date && (
-                    <div className="flex items-center gap-2 text-gray-600 mb-4">
+                    <div className="flex items-center gap-2 text-gray-600 mb-6">
                       <Calendar className="w-5 h-5" />
                       <span>{new Date(tournament.tournament_date).toLocaleDateString()}</span>
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                    <span className="text-gray-600 font-medium">View Leaderboard</span>
-                    <BarChart3 className="w-6 h-6 text-green-600" />
+                  <div className="space-y-3">
+                    {/* Enter Scores Button */}
+                    <Link
+                      to={`/tournament/${tournament.id}/score`}
+                      className="flex items-center justify-between w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
+                    >
+                      <span>Enter Scores</span>
+                      <Edit className="w-5 h-5" />
+                    </Link>
+
+                    {/* View Leaderboard Button */}
+                    <Link
+                      to={`/tournament/${tournament.id}/leaderboard`}
+                      className="flex items-center justify-between w-full px-4 py-3 border-2 border-green-600 text-green-600 hover:bg-green-50 rounded-lg font-semibold transition-colors"
+                    >
+                      <span>View Leaderboard</span>
+                      <BarChart3 className="w-5 h-5" />
+                    </Link>
                   </div>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}
