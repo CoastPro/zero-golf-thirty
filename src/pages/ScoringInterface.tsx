@@ -380,7 +380,7 @@ export default function ScoringInterface() {
       {/* View Leaderboard */}
       <div className="mt-8 flex justify-center">
         <Link
-          to={`/tournament/${id}/leaderboard`}
+          to={`/tournament/${id}/leaderboard${groupIdParam ? `?group=${groupIdParam}` : ''}`}
           className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
         >
           <BarChart3 className="w-5 h-5" />
