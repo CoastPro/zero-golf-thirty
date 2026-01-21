@@ -242,14 +242,14 @@ export default function ScoringInterface() {
   const holePar = tournament.course_par[currentHole - 1];
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-2">{tournament.name}</h2>
+    <div className="max-w-2xl mx-auto px-2 py-2">
+      <div className="mb-2">
+        <h2 className="text-lg font-bold text-gray-900 mb-1">{tournament.name}</h2>
         
         {/* Group Selection - Only show if NOT restricted */}
         {!isRestricted && groups.length > 1 && (
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Select Group
             </label>
             <select
@@ -258,7 +258,7 @@ export default function ScoringInterface() {
                 const group = groups.find(g => g.id === e.target.value);
                 if (group) setSelectedGroup(group);
               }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-green-500"
+              className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-green-500"
             >
               {groups.map(group => (
                 <option key={group.id} value={group.id}>
@@ -270,24 +270,21 @@ export default function ScoringInterface() {
         )}
 
         {/* Hole Navigation */}
-        <div className="bg-white rounded-lg shadow-lg p-3 mb-3">
-          <div className="flex items-center justify-between mb-2">
+        <div className="bg-white rounded-lg shadow p-2 mb-2">
+          <div className="flex items-center justify-between mb-1">
             <button
               onClick={previousHole}
               disabled={currentHole === 1}
-              className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1.5 bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ChevronLeft className="w-6 h-6" />
+              <ChevronLeft className="w-5 h-5" />
             </button>
             
-            <div className="flex-1 mx-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
-                Select Hole
-              </label>
+            <div className="flex-1 mx-2">
               <select
                 value={currentHole}
                 onChange={(e) => setCurrentHole(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-lg font-bold text-center focus:ring-2 focus:ring-green-500"
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm font-bold text-center focus:ring-2 focus:ring-green-500"
               >
                 {Array.from({ length: 18 }, (_, i) => i + 1).map(hole => (
                   <option key={hole} value={hole}>
@@ -299,31 +296,31 @@ export default function ScoringInterface() {
 
             <button
               onClick={nextHole}
-              className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg"
+              className="p-1.5 bg-gray-100 hover:bg-gray-200 rounded"
             >
-              <ChevronRight className="w-6 h-6" />
+              <ChevronRight className="w-5 h-5" />
             </button>
           </div>
 
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">Hole {currentHole}</div>
-            <div className="text-base text-gray-600">Par {holePar}</div>
+            <div className="text-xl font-bold text-gray-900">Hole {currentHole}</div>
+            <div className="text-sm text-gray-600">Par {holePar}</div>
           </div>
         </div>
       </div>
 
       {/* Player Scoring Cards */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {selectedGroup.players.map(player => {
           const playerScore = scores[player.id]?.[currentHole] || 0;
           
           return (
-            <div key={player.id} className="bg-white rounded-lg shadow-lg p-4">
-              <div className="flex justify-between items-start mb-3">
+            <div key={player.id} className="bg-white rounded-lg shadow p-2.5">
+              <div className="flex justify-between items-start mb-2">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">{player.name}</h3>
-                  <p className="text-sm text-gray-600">
-                    Flight {player.flight} | Handicap {player.handicap}
+                  <h3 className="text-base font-bold text-gray-900 leading-tight">{player.name}</h3>
+                  <p className="text-xs text-gray-600">
+                    Flight {player.flight} | HC {player.handicap}
                   </p>
                 </div>
               </div>
@@ -332,16 +329,16 @@ export default function ScoringInterface() {
                 <button
                   onClick={() => updateScore(player.id, -1)}
                   disabled={playerScore <= 1}
-                  className="p-3 bg-red-500 hover:bg-red-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 bg-red-500 hover:bg-red-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Minus className="w-8 h-8" />
+                  <Minus className="w-6 h-6" />
                 </button>
 
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-gray-900">
+                  <div className="text-3xl font-bold text-gray-900 leading-none">
                     {playerScore || '-'}
                   </div>
-                  <div className="text-sm text-gray-600 mt-1">
+                  <div className="text-xs text-gray-600 mt-0.5">
                     {playerScore > 0 && (
                       <>
                         {playerScore - holePar > 0 ? '+' : ''}
@@ -354,9 +351,9 @@ export default function ScoringInterface() {
                 <button
                   onClick={() => updateScore(player.id, 1)}
                   disabled={playerScore >= 10}
-                  className="p-3 bg-green-500 hover:bg-green-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 bg-green-500 hover:bg-green-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Plus className="w-8 h-8" />
+                  <Plus className="w-6 h-6" />
                 </button>
               </div>
             </div>
@@ -366,18 +363,18 @@ export default function ScoringInterface() {
 
       {/* Auto-save indicator */}
       {saving && (
-        <div className="fixed bottom-4 right-4 bg-gray-900 text-white px-4 py-2 rounded-lg shadow-lg">
+        <div className="fixed bottom-2 right-2 bg-gray-900 text-white px-3 py-1.5 rounded text-sm shadow-lg">
           Saving...
         </div>
       )}
 
       {/* View Leaderboard */}
-      <div className="mt-8 flex justify-center">
+      <div className="mt-4 flex justify-center">
         <Link
           to={`/tournament/${id}/leaderboard${groupIdParam ? `?group=${groupIdParam}` : ''}`}
-          className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-semibold text-sm transition-colors"
         >
-          <BarChart3 className="w-5 h-5" />
+          <BarChart3 className="w-4 h-4" />
           View Leaderboard
         </Link>
       </div>
