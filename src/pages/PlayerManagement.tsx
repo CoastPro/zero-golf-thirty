@@ -18,11 +18,13 @@ export default function PlayerManagement() {
   const [newPlayerName, setNewPlayerName] = useState('');
   const [newPlayerHandicap, setNewPlayerHandicap] = useState(0);
   const [newPlayerFlight, setNewPlayerFlight] = useState('A');
+  const [newPlayerPhone, setNewPlayerPhone] = useState('');
 
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editHandicap, setEditHandicap] = useState(0);
   const [editFlight, setEditFlight] = useState('A');
+  const [editPhone, setEditPhone] = useState('');
 
   useEffect(() => {
     loadData();
@@ -125,6 +127,7 @@ export default function PlayerManagement() {
           name: newPlayerName,
           handicap: newPlayerHandicap,
           flight: newPlayerFlight,
+          phone: newPlayerPhone || null,
           paid: false,
           in_skins: false
         }]);
@@ -134,6 +137,7 @@ export default function PlayerManagement() {
       setNewPlayerName('');
       setNewPlayerHandicap(0);
       setNewPlayerFlight('A');
+      setNewPlayerPhone('');
       setShowAddForm(false);
       loadData();
     } catch (error) {
@@ -147,6 +151,7 @@ export default function PlayerManagement() {
     setEditName(player.name);
     setEditHandicap(player.handicap);
     setEditFlight(player.flight);
+    setEditPhone(player.phone || '');
   };
 
   const cancelEdit = () => {
@@ -154,6 +159,7 @@ export default function PlayerManagement() {
     setEditName('');
     setEditHandicap(0);
     setEditFlight('A');
+    setEditPhone('');
   };
 
   const saveEdit = async (playerId: string) => {
@@ -163,7 +169,8 @@ export default function PlayerManagement() {
         .update({
           name: editName,
           handicap: editHandicap,
-          flight: editFlight
+          flight: editFlight,
+          phone: editPhone || null
         })
         .eq('id', playerId);
 
@@ -225,18 +232,19 @@ export default function PlayerManagement() {
 
   const handleBulkImport = async () => {
     const csvText = prompt(
-      'Paste CSV data (Name, Handicap):\nExample:\nJohn Smith, 12\nJane Doe, 8'
+      'Paste CSV data (Name, Handicap, Phone):\nExample:\nJohn Smith, 12, 5551234567\nJane Doe, 8, 5559876543'
     );
     
     if (!csvText) return;
 
     const lines = csvText.trim().split('\n');
     const playersToAdd = lines.map(line => {
-      const [name, handicap] = line.split(',').map(s => s.trim());
+      const [name, handicap, phone] = line.split(',').map(s => s.trim());
       return {
         tournament_id: id,
         name,
         handicap: parseInt(handicap) || 0,
+        phone: phone || null,
         flight: 'A',
         paid: false,
         in_skins: false
@@ -376,7 +384,7 @@ export default function PlayerManagement() {
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4">Add New Player</h3>
           <form onSubmit={addPlayer} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Player Name *
@@ -399,6 +407,18 @@ export default function PlayerManagement() {
                   value={newPlayerHandicap}
                   onChange={(e) => setNewPlayerHandicap(parseInt(e.target.value) || 0)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  value={newPlayerPhone}
+                  onChange={(e) => setNewPlayerPhone(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  placeholder="5551234567"
                 />
               </div>
               <div>
@@ -473,6 +493,7 @@ export default function PlayerManagement() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Handicap</th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Quota</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Phone</th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Flight</th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Paid</th>
                         {tournament.skins_enabled && (
@@ -489,20 +510,64 @@ export default function PlayerManagement() {
                           <tr key={player.id} className="hover:bg-gray-50">
                             {isEditing ? (
                               <>
-                                <td className="px-6 py-4"><input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full px-2 py-1 border rounded" /></td>
-                                <td className="px-6 py-4"><input type="number" value={editHandicap} onChange={(e) => setEditHandicap(parseInt(e.target.value) || 0)} className="w-20 px-2 py-1 border rounded text-center" /></td>
-                                <td className="px-6 py-4 text-center font-semibold">{36 - editHandicap}</td>
                                 <td className="px-6 py-4">
-                                  <select value={editFlight} onChange={(e) => setEditFlight(e.target.value)} className="px-2 py-1 border rounded">
-                                    {tournament.flights.map(f => <option key={f} value={f}>Flight {f}</option>)}
+                                  <input
+                                    type="text"
+                                    value={editName}
+                                    onChange={(e) => setEditName(e.target.value)}
+                                    className="w-full px-2 py-1 border rounded"
+                                  />
+                                </td>
+                                <td className="px-6 py-4">
+                                  <input
+                                    type="number"
+                                    value={editHandicap}
+                                    onChange={(e) => setEditHandicap(parseInt(e.target.value) || 0)}
+                                    className="w-20 px-2 py-1 border rounded text-center"
+                                  />
+                                </td>
+                                <td className="px-6 py-4 text-center font-semibold">
+                                  {36 - editHandicap}
+                                </td>
+                                <td className="px-6 py-4">
+                                  <input
+                                    type="tel"
+                                    value={editPhone}
+                                    onChange={(e) => setEditPhone(e.target.value)}
+                                    className="w-full px-2 py-1 border rounded text-center"
+                                    placeholder="5551234567"
+                                  />
+                                </td>
+                                <td className="px-6 py-4">
+                                  <select
+                                    value={editFlight}
+                                    onChange={(e) => setEditFlight(e.target.value)}
+                                    className="px-2 py-1 border rounded"
+                                  >
+                                    {tournament.flights.map(f => (
+                                      <option key={f} value={f}>Flight {f}</option>
+                                    ))}
                                   </select>
                                 </td>
                                 <td className="px-6 py-4 text-center">-</td>
                                 {tournament.skins_enabled && <td className="px-6 py-4 text-center">-</td>}
                                 <td className="px-6 py-4">
                                   <div className="flex justify-center gap-2">
-                                    <button onClick={() => saveEdit(player.id)} className="p-2 text-green-600 hover:bg-green-50 rounded"><Check className="w-4 h-4" /></button>
-                                    <button onClick={cancelEdit} className="p-2 text-gray-600 hover:bg-gray-50 rounded"><X className="w-4 h-4" /></button>
+                                    <button
+                                      onClick={() => saveEdit(player.id)}
+                                      className="p-2 text-green-600
+<button
+                                      onClick={() => saveEdit(player.id)}
+                                      className="p-2 text-green-600 hover:bg-green-50 rounded"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={cancelEdit}
+                                      className="p-2 text-gray-600 hover:bg-gray-50 rounded"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
                                   </div>
                                 </td>
                               </>
@@ -511,23 +576,46 @@ export default function PlayerManagement() {
                                 <td className="px-6 py-4 whitespace-nowrap font-medium">{player.name}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-center">{player.handicap}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-center font-semibold">{player.quota}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
+                                  {player.phone ? `***-***-${player.phone.slice(-4)}` : '-'}
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-center">{player.flight}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-center">
-                                  <button onClick={() => togglePaid(player.id, player.paid)} className={`px-3 py-1 rounded text-sm font-medium ${player.paid ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                  <button
+                                    onClick={() => togglePaid(player.id, player.paid)}
+                                    className={`px-3 py-1 rounded text-sm font-medium ${
+                                      player.paid ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                    }`}
+                                  >
                                     {player.paid ? 'Paid' : 'Unpaid'}
                                   </button>
                                 </td>
                                 {tournament.skins_enabled && (
                                   <td className="px-6 py-4 whitespace-nowrap text-center">
-                                    <button onClick={() => toggleSkins(player.id, player.in_skins || false)} className={`px-3 py-1 rounded text-sm font-medium ${player.in_skins ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+                                    <button
+                                      onClick={() => toggleSkins(player.id, player.in_skins || false)}
+                                      className={`px-3 py-1 rounded text-sm font-medium ${
+                                        player.in_skins ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                                      }`}
+                                    >
                                       {player.in_skins ? 'In' : 'Out'}
                                     </button>
                                   </td>
                                 )}
                                 <td className="px-6 py-4 whitespace-nowrap text-center">
                                   <div className="flex justify-center gap-2">
-                                    <button onClick={() => startEdit(player)} className="p-2 text-blue-600 hover:bg-blue-50 rounded"><Edit2 className="w-4 h-4" /></button>
-                                    <button onClick={() => deletePlayer(player.id, player.name)} className="p-2 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
+                                    <button
+                                      onClick={() => startEdit(player)}
+                                      className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => deletePlayer(player.id, player.name)}
+                                      className="p-2 text-red-600 hover:bg-red-50 rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
                                   </div>
                                 </td>
                               </>

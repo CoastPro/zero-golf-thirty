@@ -1,3 +1,4 @@
+import PhoneLogin from './pages/PhoneLogin';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
 import Layout from './components/Layout';
@@ -25,6 +26,7 @@ function AppRoutes() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<AdminLogin />} />
       <Route path="/public" element={<PublicTournamentList />} />
+      <Route path="/phone-login" element={<PhoneLogin />} />  {/* ADD THIS LINE */}
       <Route path="/tournament/:id/leaderboard" element={<Leaderboard />} />
       <Route path="/tournament/:id/score" element={<ScoringInterface />} />
       

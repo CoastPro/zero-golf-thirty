@@ -32,12 +32,12 @@ export default function AdminLogin() {
           </div>
           
           {/* Live Scoring Button */}
-          <button
-            onClick={() => navigate('/public')}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-xl py-4 rounded-xl transition-colors shadow-lg mb-8"
-          >
-            Live Scoring
-          </button>
+         <button
+  onClick={() => navigate('/phone-login')}
+  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-xl py-4 rounded-xl transition-colors shadow-lg mb-8"
+>
+  Live Scoring
+</button>
 
           {/* Admin Access Section */}
           <div className="border-t pt-6">
