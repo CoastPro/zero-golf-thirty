@@ -551,24 +551,20 @@ export default function PlayerManagement() {
                                 </td>
                                 <td className="px-6 py-4 text-center">-</td>
                                 {tournament.skins_enabled && <td className="px-6 py-4 text-center">-</td>}
-                                <td className="px-6 py-4">
-                                  <div className="flex justify-center gap-2">
-                                    <button
-                                      onClick={() => saveEdit(player.id)}
-                                      className="p-2 text-green-600
-<button
-                                      onClick={() => saveEdit(player.id)}
-                                      className="p-2 text-green-600 hover:bg-green-50 rounded"
-                                    >
-                                      <Check className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      onClick={cancelEdit}
-                                      className="p-2 text-gray-600 hover:bg-gray-50 rounded"
-                                    >
-                                      <X className="w-4 h-4" />
-                                    </button>
-                                  </div>
+                                <td className="px-6 py-4"><div className="flex justify-center gap-2">
+  <button
+    onClick={() => saveEdit(player.id)}
+    className="p-2 text-green-600 hover:bg-green-50 rounded"
+  >
+    <Check className="w-4 h-4" />
+  </button>
+  <button
+    onClick={cancelEdit}
+    className="p-2 text-gray-600 hover:bg-gray-50 rounded"
+  >
+    <X className="w-4 h-4" />
+  </button>
+</div>
                                 </td>
                               </>
                             ) : (

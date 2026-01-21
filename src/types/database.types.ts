@@ -39,6 +39,7 @@ export interface Player {
   flight: string;
   paid: boolean;
   in_skins: boolean;
+  phone: string | null;
   created_at: string;
 }
 
