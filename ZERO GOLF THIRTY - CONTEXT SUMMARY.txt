@@ -1,0 +1,36 @@
+ZERO GOLF THIRTY - CONTEXT SUMMARY
+Tech Stack: React, TypeScript, Vite, Tailwind CSS, Supabase, Vercel
+Database Tables:
+
+tournaments (name, course_name, course_par[], flights[], hidden, logo_url, sponsor_logo_url, sponsor_logo_2_url, player_instructions, leaderboard_settings)
+players (name, handicap, quota, flight, phone, paid, in_skins)
+groups (number, starting_hole, starting_position, tee_time, qr_code)
+group_players (group_id, player_id, position, cart_number)
+scores (player_id, hole, score)
+saved_courses, saved_players
+
+Key Features:
+
+Phone login: Players enter last 4 digits → auto-locked to their group
+QR codes: /tournament/{id}/score?group={groupId} locks to group
+One person scores for entire group
+Leaderboards: Gross/Net, Stableford, Skins (reorderable/hideable)
+Printable scorecards (landscape, 2 sponsor logos) & cart placards
+
+Important Routes:
+
+/ → AdminLogin (PIN or phone login)
+/phone-login → PhoneLogin component
+/tournament/{id}/score → ScoringInterface (with ?group= param for restriction)
+/tournament/{id}/leaderboard → Leaderboard
+/admin/tournament/{id}/players → PlayerManagement
+
+Key Files:
+
+src/pages/ScoringInterface.tsx - Main scoring (restricted by ?group=)
+src/pages/PlayerManagement.tsx - Has phone field
+src/pages/PhoneLogin.tsx - Last 4 digit login
+src/pages/Leaderboard.tsx - Maintains group param
+src/types/database.types.ts - All interfaces
+
+Current Status: Fully working and deployed!
