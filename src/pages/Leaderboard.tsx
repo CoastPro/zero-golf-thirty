@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { RefreshCw, Trophy, Edit, Settings, Eye, EyeOff, ChevronUp, ChevronDown, Save } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Player, Score, Tournament } from '../types/database.types';
@@ -9,6 +9,9 @@ type LeaderboardTab = 'gross' | 'stableford' | 'skins';
 
 export default function Leaderboard() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const groupIdParam = searchParams.get('group');
+  
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [scores, setScores] = useState<Score[]>([]);
@@ -88,7 +91,6 @@ export default function Leaderboard() {
 
       if (error) throw error;
 
-      // Update local tournament state
       if (tournament) {
         setTournament({
           ...tournament,
@@ -99,7 +101,6 @@ export default function Leaderboard() {
         });
       }
 
-      // If active tab is now hidden, switch to first visible
       if (settingsHidden.includes(activeTab!)) {
         const visibleTabs = settingsOrder.filter(tab => !settingsHidden.includes(tab));
         if (visibleTabs.length > 0) {
@@ -149,6 +150,11 @@ export default function Leaderboard() {
   const visibleTabs = tabOrder.filter(tab => !hiddenTabs.includes(tab));
   const skinsData = tournament.skins_enabled ? buildSkinsLeaderboard(players, scores, tournament) : null;
 
+  // Build score link with group parameter if it exists
+  const scoreLink = groupIdParam 
+    ? `/tournament/${id}/score?group=${groupIdParam}`
+    : `/tournament/${id}/score`;
+
   const getTabLabel = (tab: LeaderboardTab): string => {
     if (tab === 'gross') return showNet ? 'Gross / Net' : tournament.format === 'net' ? 'Net' : 'Gross';
     if (tab === 'stableford') return 'Stableford';
@@ -174,7 +180,7 @@ export default function Leaderboard() {
             <RefreshCw className={`w-5 h-5 ${autoRefresh ? 'animate-spin' : ''}`} />
             {autoRefresh ? 'Live' : 'Paused'}
           </button>
-          <Link to={`/tournament/${id}/score`} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors">
+          <Link to={scoreLink} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors">
             <Edit className="w-5 h-5" />
             Score
           </Link>
