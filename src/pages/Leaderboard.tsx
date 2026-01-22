@@ -162,26 +162,26 @@ export default function Leaderboard() {
   };
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <div className="px-2 py-2">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">{tournament.name}</h2>
-          {tournament.course_name && <p className="text-gray-600 mt-1">{tournament.course_name}</p>}
+          <h2 className="text-xl font-bold text-gray-900">{tournament.name}</h2>
+          {tournament.course_name && <p className="text-sm text-gray-600">{tournament.course_name}</p>}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <button 
             onClick={() => setShowSettings(!showSettings)}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded-lg transition-colors"
+            className="flex items-center gap-1 px-2 py-1.5 bg-gray-600 text-white hover:bg-gray-700 rounded text-xs transition-colors"
           >
-            <Settings className="w-5 h-5" />
+            <Settings className="w-4 h-4" />
             Settings
           </button>
-          <button onClick={() => setAutoRefresh(!autoRefresh)} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${autoRefresh ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
-            <RefreshCw className={`w-5 h-5 ${autoRefresh ? 'animate-spin' : ''}`} />
-            {autoRefresh ? 'Live' : 'Paused'}
+          <button onClick={() => setAutoRefresh(!autoRefresh)} className={`flex items-center gap-1 px-2 py-1.5 rounded text-xs transition-colors ${autoRefresh ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
+            <RefreshCw className={`w-4 h-4 ${autoRefresh ? 'animate-spin' : ''}`} />
+            {autoRefresh ? 'Live' : 'Off'}
           </button>
-          <Link to={scoreLink} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors">
-            <Edit className="w-5 h-5" />
+          <Link to={scoreLink} className="flex items-center gap-1 px-2 py-1.5 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded text-xs transition-colors">
+            <Edit className="w-4 h-4" />
             Score
           </Link>
         </div>
@@ -189,39 +189,39 @@ export default function Leaderboard() {
 
       {/* Settings Panel */}
       {showSettings && (
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6 border-2 border-gray-300">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Leaderboard Settings</h3>
-          <p className="text-sm text-gray-600 mb-4">
+        <div className="bg-white rounded-lg shadow-lg p-4 mb-3 border-2 border-gray-300">
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Leaderboard Settings</h3>
+          <p className="text-xs text-gray-600 mb-3">
             Reorder and show/hide leaderboard tabs. Changes apply to all viewers.
           </p>
 
-          <div className="space-y-3 mb-6">
+          <div className="space-y-2 mb-4">
             {settingsOrder.map((tab, index) => (
-              <div key={tab} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border-2 border-gray-200">
-                <div className="flex items-center gap-3">
-                  <div className="flex flex-col gap-1">
+              <div key={tab} className="flex items-center justify-between bg-gray-50 p-2 rounded border-2 border-gray-200">
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-0.5">
                     <button
                       onClick={() => moveTabUp(index)}
                       disabled={index === 0}
-                      className="p-1 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-0.5 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                      <ChevronUp className="w-4 h-4" />
+                      <ChevronUp className="w-3 h-3" />
                     </button>
                     <button
                       onClick={() => moveTabDown(index)}
                       disabled={index === settingsOrder.length - 1}
-                      className="p-1 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-0.5 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                      <ChevronDown className="w-4 h-4" />
+                      <ChevronDown className="w-3 h-3" />
                     </button>
                   </div>
                   
-                  <div className="font-semibold text-gray-900">{getTabLabel(tab)}</div>
+                  <div className="font-semibold text-sm text-gray-900">{getTabLabel(tab)}</div>
                 </div>
 
                 <button
                   onClick={() => toggleTabVisibility(tab)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
                     settingsHidden.includes(tab)
                       ? 'bg-red-100 text-red-700 hover:bg-red-200'
                       : 'bg-green-100 text-green-700 hover:bg-green-200'
@@ -229,12 +229,12 @@ export default function Leaderboard() {
                 >
                   {settingsHidden.includes(tab) ? (
                     <>
-                      <EyeOff className="w-4 h-4" />
+                      <EyeOff className="w-3 h-3" />
                       Hidden
                     </>
                   ) : (
                     <>
-                      <Eye className="w-4 h-4" />
+                      <Eye className="w-3 h-3" />
                       Visible
                     </>
                   )}
@@ -243,38 +243,38 @@ export default function Leaderboard() {
             ))}
           </div>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-2">
             <button
               onClick={() => setShowSettings(false)}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-xs hover:bg-gray-50"
             >
               Cancel
             </button>
             <button
               onClick={saveLeaderboardSettings}
               disabled={savingSettings}
-              className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded text-xs hover:bg-green-700 disabled:opacity-50"
             >
-              <Save className="w-5 h-5" />
-              {savingSettings ? 'Saving...' : 'Save Settings'}
+              <Save className="w-4 h-4" />
+              {savingSettings ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
       )}
 
-      <div className="flex gap-2 mb-6 overflow-x-auto">
+      <div className="flex gap-1.5 mb-3 overflow-x-auto">
         {visibleTabs.map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
             {getTabLabel(tab)}
           </button>
         ))}
       </div>
 
       {activeTab !== 'skins' && (
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          <button onClick={() => setSelectedFlight(null)} className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${selectedFlight === null ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>All Flights</button>
+        <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
+          <button onClick={() => setSelectedFlight(null)} className={`px-2.5 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap ${selectedFlight === null ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>All</button>
           {tournament.flights.map(flight => (
-            <button key={flight} onClick={() => setSelectedFlight(flight)} className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${selectedFlight === flight ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Flight {flight}</button>
+            <button key={flight} onClick={() => setSelectedFlight(flight)} className={`px-2.5 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap ${selectedFlight === flight ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Flt {flight}</button>
           ))}
         </div>
       )}
@@ -282,17 +282,16 @@ export default function Leaderboard() {
       {activeTab === 'gross' && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-xs">
               <thead className="bg-green-600 text-white">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Pos</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Player</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold">Flight</th>
-                  {tournament.show_handicaps && <th className="px-4 py-3 text-center text-sm font-semibold">Hdcp</th>}
-                  <th className="px-4 py-3 text-center text-sm font-semibold">Thru</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold">Gross</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold">vs Par</th>
-                  {showNet && (<><th className="px-4 py-3 text-center text-sm font-semibold">Net</th><th className="px-4 py-3 text-center text-sm font-semibold">vs Par</th></>)}
+                  <th className="px-1.5 py-1.5 text-left font-semibold">Pos</th>
+                  <th className="px-1.5 py-1.5 text-left font-semibold">Player</th>
+                  {tournament.show_handicaps && <th className="px-1.5 py-1.5 text-center font-semibold">HC</th>}
+                  <th className="px-1.5 py-1.5 text-center font-semibold">Thru</th>
+                  <th className="px-1.5 py-1.5 text-center font-semibold">Gross</th>
+                  <th className="px-1.5 py-1.5 text-center font-semibold">±</th>
+                  {showNet && (<><th className="px-1.5 py-1.5 text-center font-semibold">Net</th><th className="px-1.5 py-1.5 text-center font-semibold">±</th></>)}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -300,37 +299,35 @@ export default function Leaderboard() {
                   const isLeader = index === 0 && entry.holesPlayed > 0;
                   return (
                     <tr key={entry.player.id} className={`hover:bg-gray-50 ${isLeader ? 'bg-yellow-50' : ''}`}>
-                      <td className="px-4 py-3 text-sm font-semibold">{entry.holesPlayed === 0 ? '-' : index + 1}{isLeader && <Trophy className="w-4 h-4 inline ml-1 text-yellow-600" />}</td>
-                      <td className="px-4 py-3 text-sm font-medium">{entry.player.name}</td>
-                      <td className="px-4 py-3 text-sm text-center">{entry.player.flight}</td>
-                      {tournament.show_handicaps && <td className="px-4 py-3 text-sm text-center">{entry.player.handicap}</td>}
-                      <td className="px-4 py-3 text-sm text-center font-medium">{formatHolesPlayed(entry.holesPlayed)}</td>
-                      <td className="px-4 py-3 text-sm text-center font-bold">{entry.holesPlayed > 0 ? entry.grossScore : '-'}</td>
-                      <td className="px-4 py-3 text-sm text-center font-semibold">{entry.holesPlayed > 0 ? formatVsPar(entry.vsParGross) : '-'}</td>
-                      {showNet && (<><td className="px-4 py-3 text-sm text-center font-bold">{entry.netScore !== null ? entry.netScore : '-'}</td><td className="px-4 py-3 text-sm text-center font-semibold">{entry.vsParNet !== null ? formatVsPar(entry.vsParNet) : '-'}</td></>)}
+                      <td className="px-1.5 py-1.5 font-semibold">{entry.holesPlayed === 0 ? '-' : index + 1}{isLeader && <Trophy className="w-3 h-3 inline ml-0.5 text-yellow-600" />}</td>
+                      <td className="px-1.5 py-1.5 font-medium truncate max-w-[100px]">{entry.player.name}</td>
+                      {tournament.show_handicaps && <td className="px-1.5 py-1.5 text-center">{entry.player.handicap}</td>}
+                      <td className="px-1.5 py-1.5 text-center font-medium">{formatHolesPlayed(entry.holesPlayed)}</td>
+                      <td className="px-1.5 py-1.5 text-center font-bold">{entry.holesPlayed > 0 ? entry.grossScore : '-'}</td>
+                      <td className="px-1.5 py-1.5 text-center font-semibold">{entry.holesPlayed > 0 ? formatVsPar(entry.vsParGross) : '-'}</td>
+                      {showNet && (<><td className="px-1.5 py-1.5 text-center font-bold">{entry.netScore !== null ? entry.netScore : '-'}</td><td className="px-1.5 py-1.5 text-center font-semibold">{entry.vsParNet !== null ? formatVsPar(entry.vsParNet) : '-'}</td></>)}
                     </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
-          {showNet && <div className="bg-gray-50 px-4 py-3 text-sm text-gray-600 border-t">* Net scores displayed after completing 18 holes</div>}
+          {showNet && <div className="bg-gray-50 px-2 py-1.5 text-xs text-gray-600 border-t">* Net scores after 18 holes</div>}
         </div>
       )}
 
       {activeTab === 'stableford' && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-xs">
               <thead className="bg-green-600 text-white">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Pos</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Player</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold">Flight</th>
-                  {tournament.show_quotas && <th className="px-4 py-3 text-center text-sm font-semibold">Quota</th>}
-                  <th className="px-4 py-3 text-center text-sm font-semibold">Thru</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold">Points</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold">vs Quota</th>
+                  <th className="px-1.5 py-1.5 text-left font-semibold">Pos</th>
+                  <th className="px-1.5 py-1.5 text-left font-semibold">Player</th>
+                  {tournament.show_quotas && <th className="px-1.5 py-1.5 text-center font-semibold">Quota</th>}
+                  <th className="px-1.5 py-1.5 text-center font-semibold">Thru</th>
+                  <th className="px-1.5 py-1.5 text-center font-semibold">Pts</th>
+                  <th className="px-1.5 py-1.5 text-center font-semibold">vs Q</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -346,59 +343,58 @@ export default function Leaderboard() {
                     const vsQuotaDisplay = entry.isComplete ? entry.vsQuota.toFixed(0) : entry.vsQuota.toFixed(1);
                     return (
                       <tr key={entry.player.id} className={`hover:bg-gray-50 ${isLeader ? 'bg-yellow-50' : ''}`}>
-                        <td className="px-4 py-3 text-sm font-semibold">{entry.holesPlayed === 0 ? '-' : index + 1}{isLeader && <Trophy className="w-4 h-4 inline ml-1 text-yellow-600" />}</td>
-                        <td className="px-4 py-3 text-sm font-medium">{entry.player.name}</td>
-                        <td className="px-4 py-3 text-sm text-center">{entry.player.flight}</td>
-                        {tournament.show_quotas && <td className="px-4 py-3 text-sm text-center">{entry.player.quota}</td>}
-                        <td className="px-4 py-3 text-sm text-center font-medium">{formatHolesPlayed(entry.holesPlayed)}</td>
-                        <td className="px-4 py-3 text-sm text-center font-bold">{entry.holesPlayed > 0 ? entry.stablefordPoints : '-'}</td>
-                        <td className="px-4 py-3 text-sm text-center font-semibold">{entry.holesPlayed > 0 ? `${entry.vsQuota > 0 ? '+' : ''}${vsQuotaDisplay}` : '-'}</td>
+                        <td className="px-1.5 py-1.5 font-semibold">{entry.holesPlayed === 0 ? '-' : index + 1}{isLeader && <Trophy className="w-3 h-3 inline ml-0.5 text-yellow-600" />}</td>
+                        <td className="px-1.5 py-1.5 font-medium truncate max-w-[100px]">{entry.player.name}</td>
+                        {tournament.show_quotas && <td className="px-1.5 py-1.5 text-center">{entry.player.quota}</td>}
+                        <td className="px-1.5 py-1.5 text-center font-medium">{formatHolesPlayed(entry.holesPlayed)}</td>
+                        <td className="px-1.5 py-1.5 text-center font-bold">{entry.holesPlayed > 0 ? entry.stablefordPoints : '-'}</td>
+                        <td className="px-1.5 py-1.5 text-center font-semibold">{entry.holesPlayed > 0 ? `${entry.vsQuota > 0 ? '+' : ''}${vsQuotaDisplay}` : '-'}</td>
                       </tr>
                     );
                   })}
               </tbody>
             </table>
           </div>
-          <div className="bg-gray-50 px-4 py-3 text-sm text-gray-600 border-t">* Points calculated vs prorated quota during play, final score vs full quota when complete</div>
+          <div className="bg-gray-50 px-2 py-1.5 text-xs text-gray-600 border-t">* Prorated during play, final vs full quota when complete</div>
         </div>
       )}
 
       {activeTab === 'skins' && skinsData && (
         <div>
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Skins Summary</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-green-50 rounded-lg"><div className="text-2xl font-bold text-green-600">${skinsData.totalPot.toFixed(2)}</div><div className="text-sm text-gray-600">Total Pot</div></div>
-              <div className="text-center p-4 bg-blue-50 rounded-lg"><div className="text-2xl font-bold text-blue-600">{skinsData.skinsWon}</div><div className="text-sm text-gray-600">Skins Won</div></div>
-              <div className="text-center p-4 bg-yellow-50 rounded-lg"><div className="text-2xl font-bold text-yellow-600">${skinsData.valuePerSkin.toFixed(2)}</div><div className="text-sm text-gray-600">Per Skin</div></div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg"><div className="text-2xl font-bold text-purple-600">{tournament.skins_type.toUpperCase()}</div><div className="text-sm text-gray-600">Scoring Type</div></div>
+          <div className="bg-white rounded-lg shadow p-3 mb-3">
+            <h3 className="text-base font-bold text-gray-900 mb-2">Skins Summary</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="text-center p-2 bg-green-50 rounded"><div className="text-lg font-bold text-green-600">${skinsData.totalPot.toFixed(2)}</div><div className="text-xs text-gray-600">Total Pot</div></div>
+              <div className="text-center p-2 bg-blue-50 rounded"><div className="text-lg font-bold text-blue-600">{skinsData.skinsWon}</div><div className="text-xs text-gray-600">Skins Won</div></div>
+              <div className="text-center p-2 bg-yellow-50 rounded"><div className="text-lg font-bold text-yellow-600">${skinsData.valuePerSkin.toFixed(2)}</div><div className="text-xs text-gray-600">Per Skin</div></div>
+              <div className="text-center p-2 bg-purple-50 rounded"><div className="text-lg font-bold text-purple-600">{tournament.skins_type.toUpperCase()}</div><div className="text-xs text-gray-600">Type</div></div>
             </div>
           </div>
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-xs">
                 <thead className="bg-green-600 text-white">
                   <tr>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Pos</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Player</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold">Skins</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold">Holes</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold">Winnings</th>
+                    <th className="px-1.5 py-1.5 text-left font-semibold">Pos</th>
+                    <th className="px-1.5 py-1.5 text-left font-semibold">Player</th>
+                    <th className="px-1.5 py-1.5 text-center font-semibold">Skins</th>
+                    <th className="px-1.5 py-1.5 text-center font-semibold">Holes</th>
+                    <th className="px-1.5 py-1.5 text-center font-semibold">Winnings</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {skinsData.leaderboard.length === 0 ? (
-                    <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-600">No skins won yet</td></tr>
+                    <tr><td colSpan={5} className="px-2 py-4 text-center text-gray-600">No skins won yet</td></tr>
                   ) : (
                     skinsData.leaderboard.map((entry, index) => {
                       const isLeader = index === 0;
                       return (
                         <tr key={entry.player.id} className={`hover:bg-gray-50 ${isLeader ? 'bg-yellow-50' : ''}`}>
-                          <td className="px-4 py-3 text-sm font-semibold">{index + 1}{isLeader && <Trophy className="w-4 h-4 inline ml-1 text-yellow-600" />}</td>
-                          <td className="px-4 py-3 text-sm font-medium">{entry.player.name}</td>
-                          <td className="px-4 py-3 text-sm text-center font-bold text-green-600">{entry.skins}</td>
-                          <td className="px-4 py-3 text-sm text-center">{entry.holes.sort((a, b) => a - b).join(', ')}</td>
-                          <td className="px-4 py-3 text-sm text-center font-bold text-green-600">${entry.winnings.toFixed(2)}</td>
+                          <td className="px-1.5 py-1.5 font-semibold">{index + 1}{isLeader && <Trophy className="w-3 h-3 inline ml-0.5 text-yellow-600" />}</td>
+                          <td className="px-1.5 py-1.5 font-medium truncate max-w-[100px]">{entry.player.name}</td>
+                          <td className="px-1.5 py-1.5 text-center font-bold text-green-600">{entry.skins}</td>
+                          <td className="px-1.5 py-1.5 text-center">{entry.holes.sort((a, b) => a - b).join(', ')}</td>
+                          <td className="px-1.5 py-1.5 text-center font-bold text-green-600">${entry.winnings.toFixed(2)}</td>
                         </tr>
                       );
                     })
@@ -408,13 +404,13 @@ export default function Leaderboard() {
             </div>
           </div>
           {skinsData.winners.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-6 mt-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Hole-by-Hole Results</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="bg-white rounded-lg shadow p-3 mt-3">
+              <h3 className="text-sm font-bold text-gray-900 mb-2">Hole-by-Hole Results</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
                 {skinsData.winners.map(winner => (
-                  <div key={`${winner.hole}-${winner.playerId}`} className="border rounded-lg p-3">
-                    <div className="text-xs text-gray-600 mb-1">Hole {winner.hole}</div>
-                    <div className="font-semibold text-sm truncate">{winner.playerName}</div>
+                  <div key={`${winner.hole}-${winner.playerId}`} className="border rounded p-2">
+                    <div className="text-xs text-gray-600 mb-0.5">Hole {winner.hole}</div>
+                    <div className="font-semibold text-xs truncate">{winner.playerName}</div>
                     <div className="text-xs text-gray-600">Score: {winner.score}</div>
                     {winner.skinsWon > 1 && <div className="text-xs font-bold text-green-600">{winner.skinsWon} Skins!</div>}
                   </div>
@@ -426,9 +422,9 @@ export default function Leaderboard() {
       )}
 
       {leaderboard.length === 0 && activeTab !== 'skins' && (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
-          <p className="text-gray-600 mb-4">No players in this tournament yet</p>
-          <Link to={`/admin/tournament/${id}/players`} className="text-green-600 hover:text-green-700 font-semibold">Add players to get started</Link>
+        <div className="text-center py-8 bg-white rounded-lg shadow">
+          <p className="text-gray-600 text-sm mb-2">No players in this tournament yet</p>
+          <Link to={`/admin/tournament/${id}/players`} className="text-green-600 hover:text-green-700 font-semibold text-sm">Add players to get started</Link>
         </div>
       )}
     </div>
