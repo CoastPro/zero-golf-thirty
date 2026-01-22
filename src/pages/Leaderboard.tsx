@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { RefreshCw, Trophy, Edit } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -19,6 +19,7 @@ export default function Leaderboard() {
   const [selectedFlight, setSelectedFlight] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<LeaderboardTab | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
     loadData();
@@ -51,17 +52,20 @@ export default function Leaderboard() {
         setScores(scoresData || []);
       }
 
-      // Only set activeTab if it's not already set (initial load)
-      if (activeTab === null && tournamentData.leaderboard_settings) {
-        const order = tournamentData.leaderboard_settings.tabs || ['gross', 'stableford', 'skins'];
-        const hidden = tournamentData.leaderboard_settings.hidden || [];
-        
-        const visibleTabs = order.filter((tab: LeaderboardTab) => !hidden.includes(tab));
-        if (visibleTabs.length > 0) {
-          setActiveTab(visibleTabs[0]);
+      // Only set activeTab on the very first load
+      if (isInitialLoad.current) {
+        if (tournamentData.leaderboard_settings) {
+          const order = tournamentData.leaderboard_settings.tabs || ['gross', 'stableford', 'skins'];
+          const hidden = tournamentData.leaderboard_settings.hidden || [];
+          
+          const visibleTabs = order.filter((tab: LeaderboardTab) => !hidden.includes(tab));
+          if (visibleTabs.length > 0) {
+            setActiveTab(visibleTabs[0]);
+          }
+        } else {
+          setActiveTab('gross');
         }
-      } else if (activeTab === null) {
-        setActiveTab('gross');
+        isInitialLoad.current = false;
       }
     } catch (error) {
       console.error('Error loading data:', error);
