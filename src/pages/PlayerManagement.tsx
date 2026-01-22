@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Plus, Upload, Trash2, ArrowRight, Edit2, X, Check, UserPlus } from 'lucide-react';
+import { Plus, Upload, Trash2, ArrowRight, Edit2, X, Check, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Player, Tournament, SavedPlayer } from '../types/database.types';
 
@@ -26,6 +26,11 @@ export default function PlayerManagement() {
   const [editFlight, setEditFlight] = useState('A');
   const [editPhone, setEditPhone] = useState('');
 
+  // Column visibility states
+  const [showFlight, setShowFlight] = useState(true);
+  const [showHandicap, setShowHandicap] = useState(true);
+  const [showQuota, setShowQuota] = useState(true);
+
   useEffect(() => {
     loadData();
     loadSavedPlayers();
@@ -42,6 +47,13 @@ export default function PlayerManagement() {
       if (tournamentError) throw tournamentError;
       setTournament(tournamentData);
 
+      // Load column visibility settings
+      if (tournamentData.player_display_settings) {
+        setShowFlight(tournamentData.player_display_settings.show_flight ?? true);
+        setShowHandicap(tournamentData.player_display_settings.show_handicap ?? true);
+        setShowQuota(tournamentData.player_display_settings.show_quota ?? true);
+      }
+
       const { data: playersData, error: playersError } = await supabase
         .from('players')
         .select('*')
@@ -56,6 +68,43 @@ export default function PlayerManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const saveDisplaySettings = async (showFlightVal: boolean, showHandicapVal: boolean, showQuotaVal: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('tournaments')
+        .update({
+          player_display_settings: {
+            show_flight: showFlightVal,
+            show_handicap: showHandicapVal,
+            show_quota: showQuotaVal
+          }
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error saving display settings:', error);
+    }
+  };
+
+  const toggleShowFlight = () => {
+    const newValue = !showFlight;
+    setShowFlight(newValue);
+    saveDisplaySettings(newValue, showHandicap, showQuota);
+  };
+
+  const toggleShowHandicap = () => {
+    const newValue = !showHandicap;
+    setShowHandicap(newValue);
+    saveDisplaySettings(showFlight, newValue, showQuota);
+  };
+
+  const toggleShowQuota = () => {
+    const newValue = !showQuota;
+    setShowQuota(newValue);
+    saveDisplaySettings(showFlight, showHandicap, newValue);
   };
 
   const loadSavedPlayers = async () => {
@@ -97,7 +146,7 @@ export default function PlayerManagement() {
           handicap: p.handicap,
           flight: tournament?.flights[0] || 'A',
           paid: false,
-          in_skins: false
+          in_skins: true // Changed default to true
         }));
 
       const { error } = await supabase
@@ -129,7 +178,7 @@ export default function PlayerManagement() {
           flight: newPlayerFlight,
           phone: newPlayerPhone || null,
           paid: false,
-          in_skins: false
+          in_skins: true // Changed default to true
         }]);
 
       if (error) throw error;
@@ -247,7 +296,7 @@ export default function PlayerManagement() {
         phone: phone || null,
         flight: 'A',
         paid: false,
-        in_skins: false
+        in_skins: true // Changed default to true
       };
     });
 
@@ -314,6 +363,46 @@ export default function PlayerManagement() {
           >
             <Plus className="w-5 h-5" />
             Add Player
+          </button>
+        </div>
+      </div>
+
+      {/* Column Visibility Controls */}
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">Show/Hide Columns</h3>
+        <div className="flex gap-3">
+          <button
+            onClick={toggleShowFlight}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              showFlight
+                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            }`}
+          >
+            {showFlight ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            Flight
+          </button>
+          <button
+            onClick={toggleShowHandicap}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              showHandicap
+                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            }`}
+          >
+            {showHandicap ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            Handicap
+          </button>
+          <button
+            onClick={toggleShowQuota}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              showQuota
+                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            }`}
+          >
+            {showQuota ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            Quota
           </button>
         </div>
       </div>
@@ -491,10 +580,10 @@ export default function PlayerManagement() {
                     <thead className="bg-gray-50 border-b">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Handicap</th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Quota</th>
+                        {showHandicap && <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Handicap</th>}
+                        {showQuota && <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Quota</th>}
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Phone</th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Flight</th>
+                        {showFlight && <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Flight</th>}
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Paid</th>
                         {tournament.skins_enabled && (
                           <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">In Skins</th>
@@ -518,17 +607,21 @@ export default function PlayerManagement() {
                                     className="w-full px-2 py-1 border rounded"
                                   />
                                 </td>
-                                <td className="px-6 py-4">
-                                  <input
-                                    type="number"
-                                    value={editHandicap}
-                                    onChange={(e) => setEditHandicap(parseInt(e.target.value) || 0)}
-                                    className="w-20 px-2 py-1 border rounded text-center"
-                                  />
-                                </td>
-                                <td className="px-6 py-4 text-center font-semibold">
-                                  {36 - editHandicap}
-                                </td>
+                                {showHandicap && (
+                                  <td className="px-6 py-4">
+                                    <input
+                                      type="number"
+                                      value={editHandicap}
+                                      onChange={(e) => setEditHandicap(parseInt(e.target.value) || 0)}
+                                      className="w-20 px-2 py-1 border rounded text-center"
+                                    />
+                                  </td>
+                                )}
+                                {showQuota && (
+                                  <td className="px-6 py-4 text-center font-semibold">
+                                    {36 - editHandicap}
+                                  </td>
+                                )}
                                 <td className="px-6 py-4">
                                   <input
                                     type="tel"
@@ -538,44 +631,47 @@ export default function PlayerManagement() {
                                     placeholder="5551234567"
                                   />
                                 </td>
-                                <td className="px-6 py-4">
-                                  <select
-                                    value={editFlight}
-                                    onChange={(e) => setEditFlight(e.target.value)}
-                                    className="px-2 py-1 border rounded"
-                                  >
-                                    {tournament.flights.map(f => (
-                                      <option key={f} value={f}>Flight {f}</option>
-                                    ))}
-                                  </select>
-                                </td>
+                                {showFlight && (
+                                  <td className="px-6 py-4">
+                                    <select
+                                      value={editFlight}
+                                      onChange={(e) => setEditFlight(e.target.value)}
+                                      className="px-2 py-1 border rounded"
+                                    >
+                                      {tournament.flights.map(f => (
+                                        <option key={f} value={f}>Flight {f}</option>
+                                      ))}
+                                    </select>
+                                  </td>
+                                )}
                                 <td className="px-6 py-4 text-center">-</td>
                                 {tournament.skins_enabled && <td className="px-6 py-4 text-center">-</td>}
-                                <td className="px-6 py-4"><div className="flex justify-center gap-2">
-  <button
-    onClick={() => saveEdit(player.id)}
-    className="p-2 text-green-600 hover:bg-green-50 rounded"
-  >
-    <Check className="w-4 h-4" />
-  </button>
-  <button
-    onClick={cancelEdit}
-    className="p-2 text-gray-600 hover:bg-gray-50 rounded"
-  >
-    <X className="w-4 h-4" />
-  </button>
-</div>
+                                <td className="px-6 py-4">
+                                  <div className="flex justify-center gap-2">
+                                    <button
+                                      onClick={() => saveEdit(player.id)}
+                                      className="p-2 text-green-600 hover:bg-green-50 rounded"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={cancelEdit}
+                                      className="p-2 text-gray-600 hover:bg-gray-50 rounded"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </td>
                               </>
                             ) : (
                               <>
                                 <td className="px-6 py-4 whitespace-nowrap font-medium">{player.name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-center">{player.handicap}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-center font-semibold">{player.quota}</td>
+                                {showHandicap && <td className="px-6 py-4 whitespace-nowrap text-center">{player.handicap}</td>}
+                                {showQuota && <td className="px-6 py-4 whitespace-nowrap text-center font-semibold">{player.quota}</td>}
                                 <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
                                   {player.phone ? `***-***-${player.phone.slice(-4)}` : '-'}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-center">{player.flight}</td>
+                                {showFlight && <td className="px-6 py-4 whitespace-nowrap text-center">{player.flight}</td>}
                                 <td className="px-6 py-4 whitespace-nowrap text-center">
                                   <button
                                     onClick={() => togglePaid(player.id, player.paid)}
