@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { RefreshCw, Trophy, Edit, Settings, Eye, EyeOff, ChevronUp, ChevronDown, Save } from 'lucide-react';
+import { RefreshCw, Trophy, Edit } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Player, Score, Tournament } from '../types/database.types';
 import { buildLeaderboard, buildSkinsLeaderboard, formatVsPar, formatHolesPlayed } from '../lib/calculations';
@@ -19,10 +19,6 @@ export default function Leaderboard() {
   const [selectedFlight, setSelectedFlight] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<LeaderboardTab | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
-  const [settingsOrder, setSettingsOrder] = useState<LeaderboardTab[]>(['gross', 'stableford', 'skins']);
-  const [settingsHidden, setSettingsHidden] = useState<LeaderboardTab[]>([]);
-  const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -58,8 +54,6 @@ export default function Leaderboard() {
       if (tournamentData.leaderboard_settings) {
         const order = tournamentData.leaderboard_settings.tabs || ['gross', 'stableford', 'skins'];
         const hidden = tournamentData.leaderboard_settings.hidden || [];
-        setSettingsOrder(order);
-        setSettingsHidden(hidden);
         
         const visibleTabs = order.filter((tab: LeaderboardTab) => !hidden.includes(tab));
         if (visibleTabs.length > 0 && activeTab === null) {
@@ -73,71 +67,6 @@ export default function Leaderboard() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const saveLeaderboardSettings = async () => {
-    try {
-      setSavingSettings(true);
-      
-      const { error } = await supabase
-        .from('tournaments')
-        .update({
-          leaderboard_settings: {
-            tabs: settingsOrder,
-            hidden: settingsHidden
-          }
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      if (tournament) {
-        setTournament({
-          ...tournament,
-          leaderboard_settings: {
-            tabs: settingsOrder,
-            hidden: settingsHidden
-          }
-        });
-      }
-
-      if (settingsHidden.includes(activeTab!)) {
-        const visibleTabs = settingsOrder.filter(tab => !settingsHidden.includes(tab));
-        if (visibleTabs.length > 0) {
-          setActiveTab(visibleTabs[0]);
-        }
-      }
-
-      setShowSettings(false);
-      alert('Leaderboard settings saved!');
-    } catch (error) {
-      console.error('Error saving settings:', error);
-      alert('Failed to save settings');
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
-  const toggleTabVisibility = (tab: LeaderboardTab) => {
-    if (settingsHidden.includes(tab)) {
-      setSettingsHidden(settingsHidden.filter(t => t !== tab));
-    } else {
-      setSettingsHidden([...settingsHidden, tab]);
-    }
-  };
-
-  const moveTabUp = (index: number) => {
-    if (index === 0) return;
-    const newOrder = [...settingsOrder];
-    [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
-    setSettingsOrder(newOrder);
-  };
-
-  const moveTabDown = (index: number) => {
-    if (index === settingsOrder.length - 1) return;
-    const newOrder = [...settingsOrder];
-    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
-    setSettingsOrder(newOrder);
   };
 
   if (loading) return <div className="text-center py-12">Loading leaderboard...</div>;
@@ -168,113 +97,31 @@ export default function Leaderboard() {
           <h2 className="text-xl font-bold text-gray-900">{tournament.name}</h2>
           {tournament.course_name && <p className="text-sm text-gray-600">{tournament.course_name}</p>}
         </div>
-        <div className="flex gap-1.5">
-          <button 
-            onClick={() => setShowSettings(!showSettings)}
-            className="flex items-center gap-1 px-2 py-1.5 bg-gray-600 text-white hover:bg-gray-700 rounded text-xs transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-            Settings
-          </button>
-          <button onClick={() => setAutoRefresh(!autoRefresh)} className={`flex items-center gap-1 px-2 py-1.5 rounded text-xs transition-colors ${autoRefresh ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
+        <div className="flex gap-2">
+          <button onClick={() => setAutoRefresh(!autoRefresh)} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${autoRefresh ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
             <RefreshCw className={`w-4 h-4 ${autoRefresh ? 'animate-spin' : ''}`} />
             {autoRefresh ? 'Live' : 'Off'}
           </button>
-          <Link to={scoreLink} className="flex items-center gap-1 px-2 py-1.5 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded text-xs transition-colors">
+          <Link to={scoreLink} className="flex items-center gap-2 px-3 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg text-sm transition-colors">
             <Edit className="w-4 h-4" />
             Score
           </Link>
         </div>
       </div>
 
-      {/* Settings Panel */}
-      {showSettings && (
-        <div className="bg-white rounded-lg shadow-lg p-4 mb-3 border-2 border-gray-300">
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Leaderboard Settings</h3>
-          <p className="text-xs text-gray-600 mb-3">
-            Reorder and show/hide leaderboard tabs. Changes apply to all viewers.
-          </p>
-
-          <div className="space-y-2 mb-4">
-            {settingsOrder.map((tab, index) => (
-              <div key={tab} className="flex items-center justify-between bg-gray-50 p-2 rounded border-2 border-gray-200">
-                <div className="flex items-center gap-2">
-                  <div className="flex flex-col gap-0.5">
-                    <button
-                      onClick={() => moveTabUp(index)}
-                      disabled={index === 0}
-                      className="p-0.5 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <ChevronUp className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => moveTabDown(index)}
-                      disabled={index === settingsOrder.length - 1}
-                      className="p-0.5 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <ChevronDown className="w-3 h-3" />
-                    </button>
-                  </div>
-                  
-                  <div className="font-semibold text-sm text-gray-900">{getTabLabel(tab)}</div>
-                </div>
-
-                <button
-                  onClick={() => toggleTabVisibility(tab)}
-                  className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                    settingsHidden.includes(tab)
-                      ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                      : 'bg-green-100 text-green-700 hover:bg-green-200'
-                  }`}
-                >
-                  {settingsHidden.includes(tab) ? (
-                    <>
-                      <EyeOff className="w-3 h-3" />
-                      Hidden
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="w-3 h-3" />
-                      Visible
-                    </>
-                  )}
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setShowSettings(false)}
-              className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-xs hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={saveLeaderboardSettings}
-              disabled={savingSettings}
-              className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded text-xs hover:bg-green-700 disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" />
-              {savingSettings ? 'Saving...' : 'Save'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="flex gap-1.5 mb-3 overflow-x-auto">
+      <div className="flex gap-2 mb-3 overflow-x-auto">
         {visibleTabs.map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
             {getTabLabel(tab)}
           </button>
         ))}
       </div>
 
       {activeTab !== 'skins' && (
-        <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
-          <button onClick={() => setSelectedFlight(null)} className={`px-2.5 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap ${selectedFlight === null ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>All</button>
+        <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+          <button onClick={() => setSelectedFlight(null)} className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${selectedFlight === null ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>All</button>
           {tournament.flights.map(flight => (
-            <button key={flight} onClick={() => setSelectedFlight(flight)} className={`px-2.5 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap ${selectedFlight === flight ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Flt {flight}</button>
+            <button key={flight} onClick={() => setSelectedFlight(flight)} className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${selectedFlight === flight ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Flt {flight}</button>
           ))}
         </div>
       )}
