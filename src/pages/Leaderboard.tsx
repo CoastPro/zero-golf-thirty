@@ -51,12 +51,13 @@ export default function Leaderboard() {
         setScores(scoresData || []);
       }
 
-      if (tournamentData.leaderboard_settings) {
+      // Only set activeTab if it's not already set (initial load)
+      if (activeTab === null && tournamentData.leaderboard_settings) {
         const order = tournamentData.leaderboard_settings.tabs || ['gross', 'stableford', 'skins'];
         const hidden = tournamentData.leaderboard_settings.hidden || [];
         
         const visibleTabs = order.filter((tab: LeaderboardTab) => !hidden.includes(tab));
-        if (visibleTabs.length > 0 && activeTab === null) {
+        if (visibleTabs.length > 0) {
           setActiveTab(visibleTabs[0]);
         }
       } else if (activeTab === null) {
