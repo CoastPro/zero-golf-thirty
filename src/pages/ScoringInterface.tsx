@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Minus, Plus, BarChart3 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Minus, Plus, BarChart3, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Player, Group, Score, Tournament } from '../types/database.types';
 
@@ -21,6 +21,10 @@ export default function ScoringInterface() {
   const [scores, setScores] = useState<Record<string, Record<number, number | null>>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showFlight, setShowFlight] = useState(true);
+  const [showHandicap, setShowHandicap] = useState(true);
+  const [showQuota, setShowQuota] = useState(true);
+  const [showOptions, setShowOptions] = useState(false);
 
   // Load saved hole from localStorage on mount
   useEffect(() => {
@@ -244,7 +248,57 @@ export default function ScoringInterface() {
   return (
     <div className="max-w-2xl mx-auto px-2 py-2">
       <div className="mb-2">
-        <h2 className="text-lg font-bold text-gray-900 mb-1">{tournament.name}</h2>
+        <div className="flex justify-between items-start mb-1">
+          <h2 className="text-lg font-bold text-gray-900">{tournament.name}</h2>
+          <button
+            onClick={() => setShowOptions(!showOptions)}
+            className="p-1.5 bg-gray-200 hover:bg-gray-300 rounded text-xs transition-colors"
+          >
+            {showOptions ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+
+        {/* Display Options */}
+        {showOptions && (
+          <div className="bg-white rounded-lg shadow p-2 mb-2 border border-gray-200">
+            <div className="text-xs font-semibold text-gray-700 mb-1.5">Show/Hide Player Info</div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowFlight(!showFlight)}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                  showFlight
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                {showFlight ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                Flight
+              </button>
+              <button
+                onClick={() => setShowHandicap(!showHandicap)}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                  showHandicap
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                {showHandicap ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                Handicap
+              </button>
+              <button
+                onClick={() => setShowQuota(!showQuota)}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                  showQuota
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                {showQuota ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                Quota
+              </button>
+            </div>
+          </div>
+        )}
         
         {/* Group Selection - Only show if NOT restricted */}
         {!isRestricted && groups.length > 1 && (
@@ -314,14 +368,23 @@ export default function ScoringInterface() {
         {selectedGroup.players.map(player => {
           const playerScore = scores[player.id]?.[currentHole] || 0;
           
+          // Build info parts array
+          const infoParts = [];
+          if (showFlight) infoParts.push(`Flight ${player.flight}`);
+          if (showHandicap) infoParts.push(`HC ${player.handicap}`);
+          if (showQuota && player.quota) infoParts.push(`Quota ${player.quota}`);
+          const infoText = infoParts.join(' | ');
+          
           return (
             <div key={player.id} className="bg-white rounded-lg shadow p-2.5">
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <h3 className="text-base font-bold text-gray-900 leading-tight">{player.name}</h3>
-                  <p className="text-xs text-gray-600">
-                    Flight {player.flight} | HC {player.handicap}
-                  </p>
+                  {infoText && (
+                    <p className="text-xs text-gray-600">
+                      {infoText}
+                    </p>
+                  )}
                 </div>
               </div>
 
