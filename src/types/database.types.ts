@@ -17,6 +17,11 @@ export interface Tournament {
     tabs: ('gross' | 'stableford' | 'skins')[];
     hidden: ('gross' | 'stableford' | 'skins')[];
   };
+  player_display_settings?: {
+    show_flight: boolean;
+    show_handicap: boolean;
+    show_quota: boolean;
+  };
   created_at: string;
   updated_at: string;
 }
