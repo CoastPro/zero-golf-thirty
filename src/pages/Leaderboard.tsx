@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { RefreshCw, Trophy, Edit } from 'lucide-react';
+import { RefreshCw, Trophy, Edit, Menu as MenuIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Player, Score, Tournament } from '../types/database.types';
 import { buildLeaderboard, buildSkinsLeaderboard, formatVsPar, formatHolesPlayed } from '../lib/calculations';
@@ -18,18 +18,18 @@ export default function Leaderboard() {
   const [loading, setLoading] = useState(true);
   const [selectedFlight, setSelectedFlight] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<LeaderboardTab | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [showMenu, setShowMenu] = useState(false);
   const isInitialLoad = useRef(true);
 
   useEffect(() => {
     loadData();
   }, [id]);
 
+  // Silent auto-refresh every 5 seconds
   useEffect(() => {
-    if (!autoRefresh) return;
     const interval = setInterval(() => { loadData(); }, 5000);
     return () => clearInterval(interval);
-  }, [autoRefresh, id]);
+  }, [id]);
 
   useEffect(() => {
     const channel = supabase.channel('score-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'scores' }, () => { loadData(); }).subscribe();
@@ -97,31 +97,51 @@ export default function Leaderboard() {
 
   return (
     <div className="px-2 py-2">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+      {/* Header */}
+      <div className="flex justify-between items-start gap-2 mb-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">{tournament.name}</h2>
           {tournament.course_name && <p className="text-sm text-gray-600">{tournament.course_name}</p>}
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setAutoRefresh(!autoRefresh)} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${autoRefresh ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
-            <RefreshCw className={`w-4 h-4 ${autoRefresh ? 'animate-spin' : ''}`} />
-            {autoRefresh ? 'Live' : 'Off'}
-          </button>
           <Link to={scoreLink} className="flex items-center gap-2 px-3 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg text-sm transition-colors">
             <Edit className="w-4 h-4" />
             Score
           </Link>
+          
+          {/* Menu Button */}
+          <div className="relative">
+            <button 
+              onClick={() => setShowMenu(!showMenu)}
+              className="flex items-center gap-2 px-3 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg text-sm transition-colors"
+            >
+              <MenuIcon className="w-4 h-4" />
+            </button>
+
+            {/* Dropdown Menu */}
+            {showMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                {visibleTabs.map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => {
+                      setActiveTab(tab);
+                      setShowMenu(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors ${
+                      activeTab === tab ? 'bg-green-50 text-green-700 font-semibold' : 'text-gray-700'
+                    }`}
+                  >
+                    {getTabLabel(tab)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="flex gap-2 mb-3 overflow-x-auto">
-        {visibleTabs.map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
-            {getTabLabel(tab)}
-          </button>
-        ))}
-      </div>
-
+      {/* Flight Filters */}
       {activeTab !== 'skins' && (
         <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
           <button onClick={() => setSelectedFlight(null)} className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${selectedFlight === null ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>All</button>
@@ -131,6 +151,7 @@ export default function Leaderboard() {
         </div>
       )}
 
+      {/* Leaderboard Content */}
       {activeTab === 'gross' && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
@@ -277,6 +298,30 @@ export default function Leaderboard() {
         <div className="text-center py-8 bg-white rounded-lg shadow">
           <p className="text-gray-600 text-sm mb-2">No players in this tournament yet</p>
           <Link to={`/admin/tournament/${id}/players`} className="text-green-600 hover:text-green-700 font-semibold text-sm">Add players to get started</Link>
+        </div>
+      )}
+
+      {/* Bottom Logos */}
+      {(tournament.leaderboard_logo_left || tournament.leaderboard_logo_right) && (
+        <div className="mt-6 flex justify-between items-center px-4">
+          <div className="w-1/2 flex justify-start">
+            {tournament.leaderboard_logo_left && (
+              <img 
+                src={tournament.leaderboard_logo_left} 
+                alt="Logo" 
+                className="h-20 object-contain"
+              />
+            )}
+          </div>
+          <div className="w-1/2 flex justify-end">
+            {tournament.leaderboard_logo_right && (
+              <img 
+                src={tournament.leaderboard_logo_right} 
+                alt="Logo" 
+                className="h-20 object-contain"
+              />
+            )}
+          </div>
         </div>
       )}
     </div>

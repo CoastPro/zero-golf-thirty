@@ -42,6 +42,9 @@ export default function TournamentSetup() {
   const [sponsorLogo2Url, setSponsorLogo2Url] = useState('');
   const [playerInstructions, setPlayerInstructions] = useState('');
   
+  const [leaderboardLogoLeft, setLeaderboardLogoLeft] = useState('');
+  const [leaderboardLogoRight, setLeaderboardLogoRight] = useState('');
+  
   const [savedCourses, setSavedCourses] = useState<any[]>([]);
 
   useEffect(() => {
@@ -99,6 +102,8 @@ export default function TournamentSetup() {
         setSponsorLogo1Url(data.sponsor_logo_url || '');
         setSponsorLogo2Url(data.sponsor_logo_2_url || '');
         setPlayerInstructions(data.player_instructions || '');
+        setLeaderboardLogoLeft(data.leaderboard_logo_left || '');
+        setLeaderboardLogoRight(data.leaderboard_logo_right || '');
       }
     } catch (error) {
       console.error('Error loading tournament:', error);
@@ -192,6 +197,8 @@ export default function TournamentSetup() {
         sponsor_logo_url: sponsorLogo1Url || null,
         sponsor_logo_2_url: sponsorLogo2Url || null,
         player_instructions: playerInstructions || null,
+        leaderboard_logo_left: leaderboardLogoLeft || null,
+        leaderboard_logo_right: leaderboardLogoRight || null,
       };
 
       if (isEditing) {
@@ -465,6 +472,126 @@ export default function TournamentSetup() {
             <p className="text-xs text-gray-500 mt-1">
               {playerInstructions.length}/200 characters
             </p>
+          </div>
+        </div>
+
+        {/* Leaderboard Display */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-xl font-semibold mb-4">Leaderboard Display</h3>
+          <p className="text-sm text-gray-600 mb-6">
+            Configure logos that appear at the bottom of the leaderboard page (80px tall)
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Left Logo */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Bottom Left Logo
+              </label>
+              
+              {leaderboardLogoLeft && (
+                <div className="mb-3 p-3 border-2 border-gray-200 rounded-lg bg-gray-50">
+                  <img src={leaderboardLogoLeft} alt="Left Logo" className="h-20 mx-auto object-contain" />
+                </div>
+              )}
+
+              <input
+                type="text"
+                value={leaderboardLogoLeft}
+                onChange={(e) => setLeaderboardLogoLeft(e.target.value)}
+                placeholder="Paste image URL"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLeaderboardLogoLeft(logoUrl)}
+                  disabled={!logoUrl}
+                  className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50"
+                >
+                  Use Tournament Logo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLeaderboardLogoLeft(sponsorLogo1Url)}
+                  disabled={!sponsorLogo1Url}
+                  className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50"
+                >
+                  Use Sponsor 1
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLeaderboardLogoLeft(sponsorLogo2Url)}
+                  disabled={!sponsorLogo2Url}
+                  className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50"
+                >
+                  Use Sponsor 2
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLeaderboardLogoLeft('')}
+                  className="text-xs px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            {/* Right Logo */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Bottom Right Logo
+              </label>
+              
+              {leaderboardLogoRight && (
+                <div className="mb-3 p-3 border-2 border-gray-200 rounded-lg bg-gray-50">
+                  <img src={leaderboardLogoRight} alt="Right Logo" className="h-20 mx-auto object-contain" />
+                </div>
+              )}
+
+              <input
+                type="text"
+                value={leaderboardLogoRight}
+                onChange={(e) => setLeaderboardLogoRight(e.target.value)}
+                placeholder="Paste image URL"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLeaderboardLogoRight(logoUrl)}
+                  disabled={!logoUrl}
+                  className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50"
+                >
+                  Use Tournament Logo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLeaderboardLogoRight(sponsorLogo1Url)}
+                  disabled={!sponsorLogo1Url}
+                  className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50"
+                >
+                  Use Sponsor 1
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLeaderboardLogoRight(sponsorLogo2Url)}
+                  disabled={!sponsorLogo2Url}
+                  className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50"
+                >
+                  Use Sponsor 2
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLeaderboardLogoRight('')}
+                  className="text-xs px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

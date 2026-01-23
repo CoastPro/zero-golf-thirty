@@ -22,6 +22,8 @@ export interface Tournament {
     show_handicap: boolean;
     show_quota: boolean;
   };
+  leaderboard_logo_left?: string | null;
+  leaderboard_logo_right?: string | null;
   created_at: string;
   updated_at: string;
 }
