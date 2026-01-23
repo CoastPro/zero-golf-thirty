@@ -26,10 +26,10 @@ export default function PlayerManagement() {
   const [editFlight, setEditFlight] = useState('A');
   const [editPhone, setEditPhone] = useState('');
 
-  // Column visibility states
-  const [showFlight, setShowFlight] = useState(true);
-  const [showHandicap, setShowHandicap] = useState(true);
-  const [showQuota, setShowQuota] = useState(true);
+  // Player visibility settings (what PLAYERS see on scoring page)
+  const [showFlightToPlayers, setShowFlightToPlayers] = useState(true);
+  const [showHandicapToPlayers, setShowHandicapToPlayers] = useState(true);
+  const [showQuotaToPlayers, setShowQuotaToPlayers] = useState(true);
 
   useEffect(() => {
     loadData();
@@ -47,11 +47,11 @@ export default function PlayerManagement() {
       if (tournamentError) throw tournamentError;
       setTournament(tournamentData);
 
-      // Load column visibility settings
+      // Load player visibility settings
       if (tournamentData.player_display_settings) {
-        setShowFlight(tournamentData.player_display_settings.show_flight ?? true);
-        setShowHandicap(tournamentData.player_display_settings.show_handicap ?? true);
-        setShowQuota(tournamentData.player_display_settings.show_quota ?? true);
+        setShowFlightToPlayers(tournamentData.player_display_settings.show_flight ?? true);
+        setShowHandicapToPlayers(tournamentData.player_display_settings.show_handicap ?? true);
+        setShowQuotaToPlayers(tournamentData.player_display_settings.show_quota ?? true);
       }
 
       const { data: playersData, error: playersError } = await supabase
@@ -70,15 +70,15 @@ export default function PlayerManagement() {
     }
   };
 
-  const saveDisplaySettings = async (showFlightVal: boolean, showHandicapVal: boolean, showQuotaVal: boolean) => {
+  const saveDisplaySettings = async (showFlight: boolean, showHandicap: boolean, showQuota: boolean) => {
     try {
       const { error } = await supabase
         .from('tournaments')
         .update({
           player_display_settings: {
-            show_flight: showFlightVal,
-            show_handicap: showHandicapVal,
-            show_quota: showQuotaVal
+            show_flight: showFlight,
+            show_handicap: showHandicap,
+            show_quota: showQuota
           }
         })
         .eq('id', id);
@@ -89,22 +89,22 @@ export default function PlayerManagement() {
     }
   };
 
-  const toggleShowFlight = () => {
-    const newValue = !showFlight;
-    setShowFlight(newValue);
-    saveDisplaySettings(newValue, showHandicap, showQuota);
+  const toggleShowFlightToPlayers = () => {
+    const newValue = !showFlightToPlayers;
+    setShowFlightToPlayers(newValue);
+    saveDisplaySettings(newValue, showHandicapToPlayers, showQuotaToPlayers);
   };
 
-  const toggleShowHandicap = () => {
-    const newValue = !showHandicap;
-    setShowHandicap(newValue);
-    saveDisplaySettings(showFlight, newValue, showQuota);
+  const toggleShowHandicapToPlayers = () => {
+    const newValue = !showHandicapToPlayers;
+    setShowHandicapToPlayers(newValue);
+    saveDisplaySettings(showFlightToPlayers, newValue, showQuotaToPlayers);
   };
 
-  const toggleShowQuota = () => {
-    const newValue = !showQuota;
-    setShowQuota(newValue);
-    saveDisplaySettings(showFlight, showHandicap, newValue);
+  const toggleShowQuotaToPlayers = () => {
+    const newValue = !showQuotaToPlayers;
+    setShowQuotaToPlayers(newValue);
+    saveDisplaySettings(showFlightToPlayers, showHandicapToPlayers, newValue);
   };
 
   const loadSavedPlayers = async () => {
@@ -146,7 +146,7 @@ export default function PlayerManagement() {
           handicap: p.handicap,
           flight: tournament?.flights[0] || 'A',
           paid: false,
-          in_skins: true // Changed default to true
+          in_skins: true
         }));
 
       const { error } = await supabase
@@ -178,7 +178,7 @@ export default function PlayerManagement() {
           flight: newPlayerFlight,
           phone: newPlayerPhone || null,
           paid: false,
-          in_skins: true // Changed default to true
+          in_skins: true
         }]);
 
       if (error) throw error;
@@ -296,7 +296,7 @@ export default function PlayerManagement() {
         phone: phone || null,
         flight: 'A',
         paid: false,
-        in_skins: true // Changed default to true
+        in_skins: true
       };
     });
 
@@ -367,41 +367,42 @@ export default function PlayerManagement() {
         </div>
       </div>
 
-      {/* Column Visibility Controls */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Show/Hide Columns</h3>
+      {/* Player Visibility Controls */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg shadow p-4 mb-6">
+        <h3 className="text-sm font-semibold text-blue-900 mb-2">🔒 Player Scoring Page Visibility</h3>
+        <p className="text-xs text-blue-700 mb-3">Control what players see on their scoring page (admins always see everything)</p>
         <div className="flex gap-3">
           <button
-            onClick={toggleShowFlight}
+            onClick={toggleShowFlightToPlayers}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              showFlight
+              showFlightToPlayers
                 ? 'bg-green-100 text-green-700 hover:bg-green-200'
                 : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
             }`}
           >
-            {showFlight ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            {showFlightToPlayers ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
             Flight
           </button>
           <button
-            onClick={toggleShowHandicap}
+            onClick={toggleShowHandicapToPlayers}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              showHandicap
+              showHandicapToPlayers
                 ? 'bg-green-100 text-green-700 hover:bg-green-200'
                 : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
             }`}
           >
-            {showHandicap ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            {showHandicapToPlayers ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
             Handicap
           </button>
           <button
-            onClick={toggleShowQuota}
+            onClick={toggleShowQuotaToPlayers}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              showQuota
+              showQuotaToPlayers
                 ? 'bg-green-100 text-green-700 hover:bg-green-200'
                 : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
             }`}
           >
-            {showQuota ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            {showQuotaToPlayers ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
             Quota
           </button>
         </div>
@@ -580,10 +581,10 @@ export default function PlayerManagement() {
                     <thead className="bg-gray-50 border-b">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                        {showHandicap && <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Handicap</th>}
-                        {showQuota && <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Quota</th>}
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Handicap</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Quota</th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Phone</th>
-                        {showFlight && <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Flight</th>}
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Flight</th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Paid</th>
                         {tournament.skins_enabled && (
                           <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">In Skins</th>
@@ -607,21 +608,17 @@ export default function PlayerManagement() {
                                     className="w-full px-2 py-1 border rounded"
                                   />
                                 </td>
-                                {showHandicap && (
-                                  <td className="px-6 py-4">
-                                    <input
-                                      type="number"
-                                      value={editHandicap}
-                                      onChange={(e) => setEditHandicap(parseInt(e.target.value) || 0)}
-                                      className="w-20 px-2 py-1 border rounded text-center"
-                                    />
-                                  </td>
-                                )}
-                                {showQuota && (
-                                  <td className="px-6 py-4 text-center font-semibold">
-                                    {36 - editHandicap}
-                                  </td>
-                                )}
+                                <td className="px-6 py-4">
+                                  <input
+                                    type="number"
+                                    value={editHandicap}
+                                    onChange={(e) => setEditHandicap(parseInt(e.target.value) || 0)}
+                                    className="w-20 px-2 py-1 border rounded text-center"
+                                  />
+                                </td>
+                                <td className="px-6 py-4 text-center font-semibold">
+                                  {36 - editHandicap}
+                                </td>
                                 <td className="px-6 py-4">
                                   <input
                                     type="tel"
@@ -631,19 +628,17 @@ export default function PlayerManagement() {
                                     placeholder="5551234567"
                                   />
                                 </td>
-                                {showFlight && (
-                                  <td className="px-6 py-4">
-                                    <select
-                                      value={editFlight}
-                                      onChange={(e) => setEditFlight(e.target.value)}
-                                      className="px-2 py-1 border rounded"
-                                    >
-                                      {tournament.flights.map(f => (
-                                        <option key={f} value={f}>Flight {f}</option>
-                                      ))}
-                                    </select>
-                                  </td>
-                                )}
+                                <td className="px-6 py-4">
+                                  <select
+                                    value={editFlight}
+                                    onChange={(e) => setEditFlight(e.target.value)}
+                                    className="px-2 py-1 border rounded"
+                                  >
+                                    {tournament.flights.map(f => (
+                                      <option key={f} value={f}>Flight {f}</option>
+                                    ))}
+                                  </select>
+                                </td>
                                 <td className="px-6 py-4 text-center">-</td>
                                 {tournament.skins_enabled && <td className="px-6 py-4 text-center">-</td>}
                                 <td className="px-6 py-4">
@@ -666,12 +661,12 @@ export default function PlayerManagement() {
                             ) : (
                               <>
                                 <td className="px-6 py-4 whitespace-nowrap font-medium">{player.name}</td>
-                                {showHandicap && <td className="px-6 py-4 whitespace-nowrap text-center">{player.handicap}</td>}
-                                {showQuota && <td className="px-6 py-4 whitespace-nowrap text-center font-semibold">{player.quota}</td>}
+                                <td className="px-6 py-4 whitespace-nowrap text-center">{player.handicap}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-center font-semibold">{player.quota}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
                                   {player.phone ? `***-***-${player.phone.slice(-4)}` : '-'}
                                 </td>
-                                {showFlight && <td className="px-6 py-4 whitespace-nowrap text-center">{player.flight}</td>}
+                                <td className="px-6 py-4 whitespace-nowrap text-center">{player.flight}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-center">
                                   <button
                                     onClick={() => togglePaid(player.id, player.paid)}

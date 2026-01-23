@@ -241,6 +241,11 @@ export default function ScoringInterface() {
 
   const holePar = tournament.course_par[currentHole - 1];
 
+  // Get visibility settings from tournament
+  const showFlight = tournament.player_display_settings?.show_flight ?? true;
+  const showHandicap = tournament.player_display_settings?.show_handicap ?? true;
+  const showQuota = tournament.player_display_settings?.show_quota ?? true;
+
   return (
     <div className="max-w-2xl mx-auto px-2 py-2">
       <div className="mb-2">
@@ -314,14 +319,23 @@ export default function ScoringInterface() {
         {selectedGroup.players.map(player => {
           const playerScore = scores[player.id]?.[currentHole] || 0;
           
+          // Build info parts array based on visibility settings
+          const infoParts = [];
+          if (showFlight) infoParts.push(`Flight ${player.flight}`);
+          if (showHandicap) infoParts.push(`HC ${player.handicap}`);
+          if (showQuota) infoParts.push(`Quota ${player.quota}`);
+          const infoText = infoParts.join(' | ');
+          
           return (
             <div key={player.id} className="bg-white rounded-lg shadow p-2.5">
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <h3 className="text-base font-bold text-gray-900 leading-tight">{player.name}</h3>
-                  <p className="text-xs text-gray-600">
-                    Flight {player.flight} | HC {player.handicap}
-                  </p>
+                  {infoText && (
+                    <p className="text-xs text-gray-600">
+                      {infoText}
+                    </p>
+                  )}
                 </div>
               </div>
 
