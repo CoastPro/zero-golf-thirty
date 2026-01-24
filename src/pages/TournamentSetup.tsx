@@ -14,6 +14,8 @@ const DEFAULT_STABLEFORD = {
   doublePlus: 0
 };
 
+type LeaderboardTab = 'gross' | 'stableford' | 'skins';
+
 export default function TournamentSetup() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -44,6 +46,9 @@ export default function TournamentSetup() {
   
   const [leaderboardLogoLeft, setLeaderboardLogoLeft] = useState('');
   const [leaderboardLogoRight, setLeaderboardLogoRight] = useState('');
+  
+  const [leaderboardTabOrder, setLeaderboardTabOrder] = useState<LeaderboardTab[]>(['gross', 'stableford', 'skins']);
+  const [leaderboardHiddenTabs, setLeaderboardHiddenTabs] = useState<LeaderboardTab[]>([]);
   
   const [savedCourses, setSavedCourses] = useState<any[]>([]);
 
@@ -104,6 +109,12 @@ export default function TournamentSetup() {
         setPlayerInstructions(data.player_instructions || '');
         setLeaderboardLogoLeft(data.leaderboard_logo_left || '');
         setLeaderboardLogoRight(data.leaderboard_logo_right || '');
+        
+        // Load leaderboard settings
+        if (data.leaderboard_settings) {
+          setLeaderboardTabOrder(data.leaderboard_settings.tabs || ['gross', 'stableford', 'skins']);
+          setLeaderboardHiddenTabs(data.leaderboard_settings.hidden || []);
+        }
       }
     } catch (error) {
       console.error('Error loading tournament:', error);
@@ -174,6 +185,34 @@ export default function TournamentSetup() {
     }
   };
 
+  const moveTabUp = (index: number) => {
+    if (index === 0) return;
+    const newOrder = [...leaderboardTabOrder];
+    [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
+    setLeaderboardTabOrder(newOrder);
+  };
+
+  const moveTabDown = (index: number) => {
+    if (index === leaderboardTabOrder.length - 1) return;
+    const newOrder = [...leaderboardTabOrder];
+    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+    setLeaderboardTabOrder(newOrder);
+  };
+
+  const toggleTabVisibility = (tab: LeaderboardTab) => {
+    if (leaderboardHiddenTabs.includes(tab)) {
+      setLeaderboardHiddenTabs(leaderboardHiddenTabs.filter(t => t !== tab));
+    } else {
+      setLeaderboardHiddenTabs([...leaderboardHiddenTabs, tab]);
+    }
+  };
+
+  const getTabLabel = (tab: LeaderboardTab): string => {
+    if (tab === 'gross') return 'Gross / Net';
+    if (tab === 'stableford') return 'Stableford';
+    return 'Skins';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -199,6 +238,10 @@ export default function TournamentSetup() {
         player_instructions: playerInstructions || null,
         leaderboard_logo_left: leaderboardLogoLeft || null,
         leaderboard_logo_right: leaderboardLogoRight || null,
+        leaderboard_settings: {
+          tabs: leaderboardTabOrder,
+          hidden: leaderboardHiddenTabs
+        }
       };
 
       if (isEditing) {
@@ -475,7 +518,66 @@ export default function TournamentSetup() {
           </div>
         </div>
 
-        {/* Leaderboard Display */}
+        {/* Leaderboard Settings */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-xl font-semibold mb-4">Leaderboard Settings</h3>
+          <p className="text-sm text-gray-600 mb-6">
+            Configure which leaderboards are visible to players and their display order
+          </p>
+
+          <div className="space-y-3 mb-6">
+            {leaderboardTabOrder.map((tab, index) => (
+              <div key={tab} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border-2 border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col gap-1">
+                    <button
+                      type="button"
+                      onClick={() => moveTabUp(index)}
+                      disabled={index === 0}
+                      className="p-1 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveTabDown(index)}
+                      disabled={index === leaderboardTabOrder.length - 1}
+                      className="p-1 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  <div className="font-semibold text-gray-900">{getTabLabel(tab)}</div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => toggleTabVisibility(tab)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    leaderboardHiddenTabs.includes(tab)
+                      ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                      : 'bg-green-100 text-green-700 hover:bg-green-200'
+                  }`}
+                >
+                  {leaderboardHiddenTabs.includes(tab) ? (
+                    <>
+                      <EyeOff className="w-4 h-4" />
+                      Hidden
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-4 h-4" />
+                      Visible
+                    </>
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Leaderboard Display (Bottom Logos) */}
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-xl font-semibold mb-4">Leaderboard Display</h3>
           <p className="text-sm text-gray-600 mb-6">
