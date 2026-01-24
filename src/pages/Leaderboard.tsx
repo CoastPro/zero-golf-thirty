@@ -151,6 +151,30 @@ export default function Leaderboard() {
         </div>
       )}
 
+      {/* Sponsor Logos */}
+      {(tournament.leaderboard_logo_left || tournament.leaderboard_logo_right) && (
+        <div className="flex justify-between items-center px-4 py-4 mb-3">
+          <div className="w-1/2 flex justify-start">
+            {tournament.leaderboard_logo_left && (
+              <img 
+                src={tournament.leaderboard_logo_left} 
+                alt="Sponsor" 
+                className="h-20 object-contain"
+              />
+            )}
+          </div>
+          <div className="w-1/2 flex justify-end">
+            {tournament.leaderboard_logo_right && (
+              <img 
+                src={tournament.leaderboard_logo_right} 
+                alt="Sponsor" 
+                className="h-20 object-contain"
+              />
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Leaderboard Content */}
       {activeTab === 'gross' && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -198,8 +222,8 @@ export default function Leaderboard() {
                   <th className="px-1.5 py-1.5 text-left font-semibold">Pos</th>
                   <th className="px-1.5 py-1.5 text-left font-semibold">Player</th>
                   {tournament.show_quotas && <th className="px-1.5 py-1.5 text-center font-semibold">Quota</th>}
-                  <th className="px-1.5 py-1.5 text-center font-semibold">Thru</th>
                   <th className="px-1.5 py-1.5 text-center font-semibold">Pts</th>
+                  <th className="px-1.5 py-1.5 text-center font-semibold">Thru</th>
                   <th className="px-1.5 py-1.5 text-center font-semibold">vs Q</th>
                 </tr>
               </thead>
@@ -219,8 +243,8 @@ export default function Leaderboard() {
                         <td className="px-1.5 py-1.5 font-semibold">{entry.holesPlayed === 0 ? '-' : index + 1}{isLeader && <Trophy className="w-3 h-3 inline ml-0.5 text-yellow-600" />}</td>
                         <td className="px-1.5 py-1.5 font-medium truncate max-w-[100px]">{entry.player.name}</td>
                         {tournament.show_quotas && <td className="px-1.5 py-1.5 text-center">{entry.player.quota}</td>}
-                        <td className="px-1.5 py-1.5 text-center font-medium">{formatHolesPlayed(entry.holesPlayed)}</td>
                         <td className="px-1.5 py-1.5 text-center font-bold">{entry.holesPlayed > 0 ? entry.stablefordPoints : '-'}</td>
+                        <td className="px-1.5 py-1.5 text-center font-medium">{formatHolesPlayed(entry.holesPlayed)}</td>
                         <td className="px-1.5 py-1.5 text-center font-semibold">{entry.holesPlayed > 0 ? `${entry.vsQuota > 0 ? '+' : ''}${vsQuotaDisplay}` : '-'}</td>
                       </tr>
                     );
@@ -298,30 +322,6 @@ export default function Leaderboard() {
         <div className="text-center py-8 bg-white rounded-lg shadow">
           <p className="text-gray-600 text-sm mb-2">No players in this tournament yet</p>
           <Link to={`/admin/tournament/${id}/players`} className="text-green-600 hover:text-green-700 font-semibold text-sm">Add players to get started</Link>
-        </div>
-      )}
-
-      {/* Bottom Logos */}
-      {(tournament.leaderboard_logo_left || tournament.leaderboard_logo_right) && (
-        <div className="mt-6 flex justify-between items-center px-4">
-          <div className="w-1/2 flex justify-start">
-            {tournament.leaderboard_logo_left && (
-              <img 
-                src={tournament.leaderboard_logo_left} 
-                alt="Logo" 
-                className="h-20 object-contain"
-              />
-            )}
-          </div>
-          <div className="w-1/2 flex justify-end">
-            {tournament.leaderboard_logo_right && (
-              <img 
-                src={tournament.leaderboard_logo_right} 
-                alt="Logo" 
-                className="h-20 object-contain"
-              />
-            )}
-          </div>
         </div>
       )}
     </div>
