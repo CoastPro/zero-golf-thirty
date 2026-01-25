@@ -46,25 +46,36 @@ export default function TournamentList() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (user?.role === 'sub_admin') {
-        // Sub-admin sees: tournaments they created + tournaments shared with them
-        const { data: sharedTournamentIds } = await supabase
-          .from('tournament_access')
-          .select('tournament_id')
-          .eq('user_id', user.id);
+if (user?.role === 'sub_admin') {
+  // Sub-admin sees: tournaments they created + tournaments shared with them
+  const { data: sharedTournamentIds } = await supabase
+    .from('tournament_access')
+    .select('tournament_id')
+    .eq('user_id', user.id);
 
-        const sharedIds = sharedTournamentIds?.map(t => t.tournament_id) || [];
+  const sharedIds = sharedTournamentIds?.map(t => t.tournament_id) || [];
 
-        // Get tournaments created by user OR shared with user
-        const { data: tournamentsData, error: tournamentsError } = await supabase
-          .from('tournaments')
-          .select('*')
-          .or(`created_by.eq.${user.id},id.in.(${sharedIds.length > 0 ? sharedIds.join(',') : 'null'})`)
-          .order('created_at', { ascending: false });
+  // Build query differently based on whether there are shared tournaments
+  let subAdminQuery = supabase
+    .from('tournaments')
+    .select('*');
 
-        if (tournamentsError) throw tournamentsError;
-        setTournaments(tournamentsData || []);
-      } else {
+  if (sharedIds.length > 0) {
+    // Has shared tournaments: created_by OR in shared list
+    subAdminQuery = subAdminQuery.or(`created_by.eq.${user.id},id.in.(${sharedIds.join(',')})`);
+  } else {
+    // No shared tournaments: only created_by
+    subAdminQuery = subAdminQuery.eq('created_by', user.id);
+  }
+
+  const { data: tournamentsData, error: tournamentsError } = await subAdminQuery
+    .order('created_at', { ascending: false });
+
+  if (tournamentsError) throw tournamentsError;
+  setTournaments(tournamentsData || []);
+}
+
+else {
         // Master admin sees all tournaments
         const { data, error } = await query;
         if (error) throw error;
