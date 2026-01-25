@@ -274,6 +274,30 @@ export default function ScoringInterface() {
           </div>
         )}
 
+        {/* Sponsor Logos */}
+        {(tournament.leaderboard_logo_left || tournament.leaderboard_logo_right) && (
+          <div className="flex justify-between items-center px-2 py-2 mb-2">
+            <div className="w-1/2 flex justify-start">
+              {tournament.leaderboard_logo_left && (
+                <img 
+                  src={tournament.leaderboard_logo_left} 
+                  alt="Sponsor" 
+                  className="h-12 object-contain"
+                />
+              )}
+            </div>
+            <div className="w-1/2 flex justify-end">
+              {tournament.leaderboard_logo_right && (
+                <img 
+                  src={tournament.leaderboard_logo_right} 
+                  alt="Sponsor" 
+                  className="h-12 object-contain"
+                />
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Hole Navigation */}
         <div className="bg-white rounded-lg shadow p-2 mb-2">
           <div className="flex items-center justify-between">
@@ -307,30 +331,6 @@ export default function ScoringInterface() {
             </button>
           </div>
         </div>
-
-        {/* Sponsor Logos */}
-        {(tournament.leaderboard_logo_left || tournament.leaderboard_logo_right) && (
-          <div className="flex justify-between items-center px-2 py-2 mb-2">
-            <div className="w-1/2 flex justify-start">
-              {tournament.leaderboard_logo_left && (
-                <img 
-                  src={tournament.leaderboard_logo_left} 
-                  alt="Sponsor" 
-                  className="h-12 object-contain"
-                />
-              )}
-            </div>
-            <div className="w-1/2 flex justify-end">
-              {tournament.leaderboard_logo_right && (
-                <img 
-                  src={tournament.leaderboard_logo_right} 
-                  alt="Sponsor" 
-                  className="h-12 object-contain"
-                />
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Player Scoring Cards */}
