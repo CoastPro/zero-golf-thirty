@@ -276,7 +276,7 @@ export default function ScoringInterface() {
 
         {/* Hole Navigation */}
         <div className="bg-white rounded-lg shadow p-2 mb-2">
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between">
             <button
               onClick={previousHole}
               disabled={currentHole === 1}
@@ -306,12 +306,31 @@ export default function ScoringInterface() {
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
-
-          <div className="text-center">
-            <div className="text-xl font-bold text-gray-900">Hole {currentHole}</div>
-            <div className="text-sm text-gray-600">Par {holePar}</div>
-          </div>
         </div>
+
+        {/* Sponsor Logos */}
+        {(tournament.leaderboard_logo_left || tournament.leaderboard_logo_right) && (
+          <div className="flex justify-between items-center px-2 py-2 mb-2">
+            <div className="w-1/2 flex justify-start">
+              {tournament.leaderboard_logo_left && (
+                <img 
+                  src={tournament.leaderboard_logo_left} 
+                  alt="Sponsor" 
+                  className="h-12 object-contain"
+                />
+              )}
+            </div>
+            <div className="w-1/2 flex justify-end">
+              {tournament.leaderboard_logo_right && (
+                <img 
+                  src={tournament.leaderboard_logo_right} 
+                  alt="Sponsor" 
+                  className="h-12 object-contain"
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Player Scoring Cards */}
@@ -328,15 +347,13 @@ export default function ScoringInterface() {
           
           return (
             <div key={player.id} className="bg-white rounded-lg shadow p-2.5">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="text-base font-bold text-gray-900 leading-tight">{player.name}</h3>
-                  {infoText && (
-                    <p className="text-xs text-gray-600">
-                      {infoText}
-                    </p>
-                  )}
-                </div>
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-base font-bold text-gray-900 leading-tight">{player.name}</h3>
+                {infoText && (
+                  <p className="text-xs text-gray-600 text-right">
+                    {infoText}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-between">
