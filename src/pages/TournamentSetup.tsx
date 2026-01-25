@@ -244,7 +244,8 @@ export default function TournamentSetup() {
           tabs: leaderboardTabOrder,
           hidden: leaderboardHiddenTabs
         },
-        created_by: user?.id || null
+        created_by: user?.id || null,
+        visible_to_players: true
       };
 
       if (isEditing) {

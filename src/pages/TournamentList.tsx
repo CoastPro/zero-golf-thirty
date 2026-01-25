@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Calendar, Users, LogOut, UserCog } from 'lucide-react';
+import { Plus, Calendar, Users, LogOut, UserCog, Eye, EyeOff, Share2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { Tournament } from '../types/database.types';
+import { Tournament, User, TournamentAccess } from '../types/database.types';
 import { useAuth } from '../context/AuthContext';
 
 export default function TournamentList() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [tournamentAccess, setTournamentAccess] = useState<TournamentAccess[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -16,28 +18,61 @@ export default function TournamentList() {
       navigate('/admin/login');
       return;
     }
-    loadTournaments();
+    loadData();
   }, [user, navigate]);
 
-  const loadTournaments = async () => {
+  const loadData = async () => {
     try {
+      // Load all users (for sharing dropdown)
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('*')
+        .order('name');
+
+      if (usersError) throw usersError;
+      setAllUsers(usersData || []);
+
+      // Load tournament access permissions
+      const { data: accessData, error: accessError } = await supabase
+        .from('tournament_access')
+        .select('*');
+
+      if (accessError) throw accessError;
+      setTournamentAccess(accessData || []);
+
+      // Load tournaments based on user role
       let query = supabase
         .from('tournaments')
         .select('*')
         .order('created_at', { ascending: false });
 
-      // If sub-admin, only show their tournaments
       if (user?.role === 'sub_admin') {
-        query = query.eq('created_by', user.id);
+        // Sub-admin sees: tournaments they created + tournaments shared with them
+        const { data: sharedTournamentIds } = await supabase
+          .from('tournament_access')
+          .select('tournament_id')
+          .eq('user_id', user.id);
+
+        const sharedIds = sharedTournamentIds?.map(t => t.tournament_id) || [];
+
+        // Get tournaments created by user OR shared with user
+        const { data: tournamentsData, error: tournamentsError } = await supabase
+          .from('tournaments')
+          .select('*')
+          .or(`created_by.eq.${user.id},id.in.(${sharedIds.length > 0 ? sharedIds.join(',') : 'null'})`)
+          .order('created_at', { ascending: false });
+
+        if (tournamentsError) throw tournamentsError;
+        setTournaments(tournamentsData || []);
+      } else {
+        // Master admin sees all tournaments
+        const { data, error } = await query;
+        if (error) throw error;
+        setTournaments(data || []);
       }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setTournaments(data || []);
     } catch (error) {
-      console.error('Error loading tournaments:', error);
-      alert('Failed to load tournaments');
+      console.error('Error loading data:', error);
+      alert('Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -48,7 +83,75 @@ export default function TournamentList() {
     navigate('/admin/login');
   };
 
+  const toggleVisibility = async (tournamentId: string, currentVisibility: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('tournaments')
+        .update({ visible_to_players: !currentVisibility })
+        .eq('id', tournamentId);
+
+      if (error) throw error;
+      loadData();
+    } catch (error) {
+      console.error('Error toggling visibility:', error);
+      alert('Failed to update visibility');
+    }
+  };
+
+  const toggleUserAccess = async (tournamentId: string, userId: string) => {
+    try {
+      // Check if access already exists
+      const hasAccess = tournamentAccess.some(
+        a => a.tournament_id === tournamentId && a.user_id === userId
+      );
+
+      if (hasAccess) {
+        // Remove access
+        const { error } = await supabase
+          .from('tournament_access')
+          .delete()
+          .eq('tournament_id', tournamentId)
+          .eq('user_id', userId);
+
+        if (error) throw error;
+      } else {
+        // Grant access
+        const { error } = await supabase
+          .from('tournament_access')
+          .insert({
+            tournament_id: tournamentId,
+            user_id: userId,
+            granted_by: user?.id
+          });
+
+        if (error) throw error;
+      }
+
+      loadData();
+    } catch (error) {
+      console.error('Error toggling access:', error);
+      alert('Failed to update access');
+    }
+  };
+
+  const getSharedUsers = (tournamentId: string): User[] => {
+    const accessRecords = tournamentAccess.filter(a => a.tournament_id === tournamentId);
+    return allUsers.filter(u => 
+      accessRecords.some(a => a.user_id === u.id) && u.role === 'sub_admin'
+    );
+  };
+
+  const canManageTournament = (tournament: Tournament): boolean => {
+    if (user?.role === 'master_admin') return true;
+    if (tournament.created_by === user?.id) return true;
+    return tournamentAccess.some(
+      a => a.tournament_id === tournament.id && a.user_id === user?.id
+    );
+  };
+
   if (!user) return null;
+
+  const subAdmins = allUsers.filter(u => u.role === 'sub_admin');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -115,58 +218,132 @@ export default function TournamentList() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tournaments.map(tournament => (
-              <Link
-                key={tournament.id}
-                to={`/admin/tournament/${tournament.id}/players`}
-                className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border-2 border-transparent hover:border-green-500"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 mb-1">
-                      {tournament.name}
-                    </h3>
-                    {tournament.course_name && (
-                      <p className="text-sm text-gray-600">{tournament.course_name}</p>
-                    )}
-                  </div>
-                  <Calendar className="w-6 h-6 text-green-600 flex-shrink-0" />
-                </div>
+          <div className="grid grid-cols-1 gap-6">
+            {tournaments.map(tournament => {
+              const sharedUsers = getSharedUsers(tournament.id);
+              const isOwner = tournament.created_by === user?.id;
+              const isMaster = user?.role === 'master_admin';
+              const canManage = canManageTournament(tournament);
 
-                <div className="space-y-2">
-                  {tournament.tournament_date && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Calendar className="w-4 h-4" />
-                      {new Date(tournament.tournament_date).toLocaleDateString()}
+              return (
+                <div
+                  key={tournament.id}
+                  className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border-2 border-transparent hover:border-green-500"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-xl font-bold text-gray-900">
+                          {tournament.name}
+                        </h3>
+                        <button
+                          onClick={() => toggleVisibility(tournament.id, tournament.visible_to_players)}
+                          className={`flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                            tournament.visible_to_players
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                          title={tournament.visible_to_players ? 'Visible to players' : 'Hidden from players'}
+                        >
+                          {tournament.visible_to_players ? (
+                            <>
+                              <Eye className="w-4 h-4" />
+                              Visible
+                            </>
+                          ) : (
+                            <>
+                              <EyeOff className="w-4 h-4" />
+                              Hidden
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      {tournament.course_name && (
+                        <p className="text-sm text-gray-600 mb-2">{tournament.course_name}</p>
+                      )}
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        {tournament.tournament_date && (
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            {new Date(tournament.tournament_date).toLocaleDateString()}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <Users className="w-4 h-4" />
+                          {tournament.flights.length} Flight{tournament.flights.length !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sharing Section - Only for Master Admin and Owner */}
+                  {(isMaster || isOwner) && subAdmins.length > 0 && (
+                    <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Share2 className="w-4 h-4 text-gray-600" />
+                        <span className="text-sm font-medium text-gray-700">Share with Sub-Admins:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {subAdmins.map(subAdmin => {
+                          const hasAccess = tournamentAccess.some(
+                            a => a.tournament_id === tournament.id && a.user_id === subAdmin.id
+                          );
+                          const isCreator = tournament.created_by === subAdmin.id;
+
+                          return (
+                            <button
+                              key={subAdmin.id}
+                              onClick={() => !isCreator && toggleUserAccess(tournament.id, subAdmin.id)}
+                              disabled={isCreator}
+                              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                                isCreator
+                                  ? 'bg-purple-100 text-purple-700 cursor-default'
+                                  : hasAccess
+                                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                              }`}
+                            >
+                              {subAdmin.name} {isCreator && '(Owner)'}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {sharedUsers.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          Shared with: {sharedUsers.map(u => u.name).join(', ')}
+                        </p>
+                      )}
                     </div>
                   )}
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Users className="w-4 h-4" />
-                    {tournament.flights.length} Flight{tournament.flights.length !== 1 ? 's' : ''}
-                  </div>
-                </div>
 
-                <div className="mt-4 pt-4 border-t">
+                  {/* Action Buttons */}
                   <div className="flex gap-2">
-                    <Link
-                      to={`/admin/tournament/${tournament.id}/edit`}
-                      className="flex-1 text-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-medium text-sm transition-colors"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Edit
-                    </Link>
+                    {canManage && (
+                      <>
+                        <Link
+                          to={`/admin/tournament/${tournament.id}/players`}
+                          className="flex-1 text-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-medium text-sm transition-colors"
+                        >
+                          Manage
+                        </Link>
+                        <Link
+                          to={`/admin/tournament/${tournament.id}/edit`}
+                          className="flex-1 text-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-medium text-sm transition-colors"
+                        >
+                          Edit
+                        </Link>
+                      </>
+                    )}
                     <Link
                       to={`/tournament/${tournament.id}/leaderboard`}
-                      className="flex-1 text-center px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded font-medium text-sm transition-colors"
-                      onClick={(e) => e.stopPropagation()}
+                      className="flex-1 text-center px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded font-medium text-sm transition-colors"
                     >
                       View
                     </Link>
                   </div>
                 </div>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

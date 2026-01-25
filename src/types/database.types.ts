@@ -25,6 +25,7 @@ export interface Tournament {
   leaderboard_logo_left?: string | null;
   leaderboard_logo_right?: string | null;
   created_by?: string | null;
+  visible_to_players: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -122,4 +123,11 @@ export interface User {
   role: 'master_admin' | 'sub_admin';
   created_at: string;
   updated_at: string;
+}
+
+export interface TournamentAccess {
+  tournament_id: string;
+  user_id: string;
+  granted_by: string | null;
+  created_at: string;
 }
