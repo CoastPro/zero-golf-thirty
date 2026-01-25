@@ -341,8 +341,8 @@ else {
                         })}
                       </div>
                       {sharedUsers.length > 0 && (
-                        <p className="text-xs text-gray-500 mt-2">
-                          Shared with: {sharedUsers.map(u => u.name).join(', ')}
+                        <p className="text-xs text-gray-500 text-center mt-1">
+                        {`${window.location.origin}/tournament/${tournament.slug || tournament.id}/login`}
                         </p>
                       )}
                     </div>
