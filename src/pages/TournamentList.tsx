@@ -382,10 +382,10 @@ else {
                 </div>
                 </div>
 
-                  {/* QR Code for Tournament Login */}
+                 {/* QR Code for Tournament Login */}
                   <div className="mt-4 pt-4 border-t">
                     <a
-                      href={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`${window.location.origin}/tournament/${tournament.slug || tournament.id}/login`)}`}
+                      href={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(window.location.origin + '/tournament/' + (tournament.slug || tournament.id) + '/login')}`}
                       download={`${tournament.slug}-qr-code.png`}
                       className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg font-medium text-sm transition-colors"
                     >
