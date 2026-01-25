@@ -26,6 +26,11 @@ export interface Tournament {
   leaderboard_logo_right?: string | null;
   created_by?: string | null;
   visible_to_players: boolean;
+visible_to_players: boolean;
+slug?: string | null;
+tournament_logo_url?: string | null;
+tournament_sponsor_logo_url?: string | null;
+custom_buttons?: CustomButton[];
   created_at: string;
   updated_at: string;
 }
@@ -130,4 +135,8 @@ export interface TournamentAccess {
   user_id: string;
   granted_by: string | null;
   created_at: string;
+}
+export interface CustomButton {
+  label: string;
+  url: string;
 }

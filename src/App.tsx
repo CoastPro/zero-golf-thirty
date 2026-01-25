@@ -16,6 +16,7 @@ import Leaderboard from './pages/Leaderboard';
 import SavedCourses from './pages/SavedCourses';
 import SavedPlayers from './pages/SavedPlayers';
 import UserManagement from './pages/UserManagement';
+import TournamentLogin from './pages/TournamentLogin';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -28,6 +29,7 @@ function AppRoutes() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<AdminLogin />} />
       <Route path="/public" element={<PublicTournamentList />} />
+      <Route path="/tournament/:slug/login" element={<TournamentLogin />} />
       <Route path="/tournament/:id/leaderboard" element={<Leaderboard />} />
       <Route path="/tournament/:id/score" element={<ScoringInterface />} />
       
