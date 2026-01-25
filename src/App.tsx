@@ -1,6 +1,8 @@
 import PhoneLogin from './pages/PhoneLogin';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './lib/auth';
+import { AuthProvider as OldAuthProvider, useAuth as useOldAuth } from './lib/auth';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import AdminLogin from './pages/AdminLogin';
 import PublicTournamentList from './pages/PublicTournamentList';
@@ -14,10 +16,11 @@ import AdminScoring from './pages/AdminScoring';
 import Leaderboard from './pages/Leaderboard';
 import SavedCourses from './pages/SavedCourses';
 import SavedPlayers from './pages/SavedPlayers';
+import UserManagement from './pages/UserManagement';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAdmin } = useAuth();
-  return isAdmin ? <>{children}</> : <Navigate to="/login" replace />;
+  const { user } = useAuth();
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
 function AppRoutes() {
@@ -26,12 +29,13 @@ function AppRoutes() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<AdminLogin />} />
       <Route path="/public" element={<PublicTournamentList />} />
-      <Route path="/phone-login" element={<PhoneLogin />} />  {/* ADD THIS LINE */}
+      <Route path="/phone-login" element={<PhoneLogin />} />
       <Route path="/tournament/:id/leaderboard" element={<Leaderboard />} />
       <Route path="/tournament/:id/score" element={<ScoringInterface />} />
       
       <Route path="/admin" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<TournamentList />} />
+        <Route path="users" element={<UserManagement />} />
         <Route path="tournament/new" element={<TournamentSetup />} />
         <Route path="tournament/:id/edit" element={<TournamentSetup />} />
         <Route path="tournament/:id/players" element={<PlayerManagement />} />
@@ -49,9 +53,11 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <OldAuthProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </OldAuthProvider>
     </AuthProvider>
   );
 }

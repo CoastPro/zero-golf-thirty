@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Save, Plus, X, GripVertical, Eye, EyeOff, ChevronUp, ChevronDown, BookOpen, Upload, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Tournament } from '../types/database.types';
+import { useAuth } from '../context/AuthContext';
 
 const DEFAULT_PAR = [4, 4, 4, 3, 5, 4, 4, 3, 4, 4, 4, 4, 3, 5, 4, 4, 3, 4];
 const DEFAULT_STABLEFORD = {
@@ -20,6 +21,7 @@ export default function TournamentSetup() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = !!id;
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
@@ -241,7 +243,8 @@ export default function TournamentSetup() {
         leaderboard_settings: {
           tabs: leaderboardTabOrder,
           hidden: leaderboardHiddenTabs
-        }
+        },
+        created_by: user?.id || null
       };
 
       if (isEditing) {

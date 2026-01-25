@@ -24,6 +24,7 @@ export interface Tournament {
   };
   leaderboard_logo_left?: string | null;
   leaderboard_logo_right?: string | null;
+  created_by?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -109,6 +110,16 @@ export interface SavedPlayer {
   id: string;
   name: string;
   handicap: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  phone: string | null;
+  pin: string;
+  role: 'master_admin' | 'sub_admin';
   created_at: string;
   updated_at: string;
 }
