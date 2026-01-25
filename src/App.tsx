@@ -1,4 +1,3 @@
-import PhoneLogin from './pages/PhoneLogin';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider as OldAuthProvider, useAuth as useOldAuth } from './lib/auth';
 import { AuthProvider } from './context/AuthContext';
@@ -29,7 +28,6 @@ function AppRoutes() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<AdminLogin />} />
       <Route path="/public" element={<PublicTournamentList />} />
-      <Route path="/phone-login" element={<PhoneLogin />} />
       <Route path="/tournament/:id/leaderboard" element={<Leaderboard />} />
       <Route path="/tournament/:id/score" element={<ScoringInterface />} />
       
