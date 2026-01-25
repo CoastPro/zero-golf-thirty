@@ -380,8 +380,7 @@ else {
                     </Link>
                   </div>
                 </div>
-                </div>
-
+                
                  {/* QR Code for Tournament Login */}
                   <div className="mt-4 pt-4 border-t">
                     <a
