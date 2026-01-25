@@ -134,6 +134,27 @@ export default function TournamentList() {
     }
   };
 
+  const deleteTournament = async (tournamentId: string, tournamentName: string) => {
+    if (!confirm(`Are you sure you want to delete "${tournamentName}"? This will delete all players, groups, and scores. This cannot be undone!`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('tournaments')
+        .delete()
+        .eq('id', tournamentId);
+
+      if (error) throw error;
+
+      alert('Tournament deleted successfully');
+      loadData();
+    } catch (error) {
+      console.error('Error deleting tournament:', error);
+      alert('Failed to delete tournament');
+    }
+  };
+
   const getSharedUsers = (tournamentId: string): User[] => {
     const accessRecords = tournamentAccess.filter(a => a.tournament_id === tournamentId);
     return allUsers.filter(u => 
@@ -332,6 +353,12 @@ export default function TournamentList() {
                         >
                           Edit
                         </Link>
+                        <button
+                          onClick={() => deleteTournament(tournament.id, tournament.name)}
+                          className="flex-1 text-center px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded font-medium text-sm transition-colors"
+                        >
+                          Delete
+                        </button>
                       </>
                     )}
                     <Link
