@@ -174,7 +174,7 @@ export default function UserManagement() {
     }
   };
 
-  const getUserName = (userId: string | null) => {
+const getUserName = (userId: string | null | undefined) => {
     if (!userId) return 'Unassigned';
     if (userId === currentUser?.id) return 'Master Admin';
     const user = users.find(u => u.id === userId);
