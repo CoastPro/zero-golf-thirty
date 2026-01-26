@@ -380,8 +380,7 @@ else {
                     </Link>
                   </div>
                 </div>
-              </div>
-            );
+             );
           })}
         </div>
       )}
