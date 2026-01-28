@@ -38,6 +38,7 @@ export interface Tournament {
     welcomeMessage: string;
     showLogo: boolean;
     showSponsorLogos: boolean;
+    showCourseName: boolean;
     showInstructions: boolean;
     instructions: string;
     instructionsTitle: string;

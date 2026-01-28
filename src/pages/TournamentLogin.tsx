@@ -8,6 +8,7 @@ interface HomePageSettings {
   welcomeMessage: string;
   showLogo: boolean;
   showSponsorLogos: boolean;
+  showCourseName: boolean;
   showInstructions: boolean;
   instructions: string;
   instructionsTitle: string;
@@ -20,6 +21,7 @@ const defaultSettings: HomePageSettings = {
   welcomeMessage: "Welcome to our tournament!",
   showLogo: true,
   showSponsorLogos: true,
+  showCourseName: true,
   showInstructions: false,
   instructions: "",
   instructionsTitle: "Instructions",
@@ -165,7 +167,7 @@ export default function TournamentLogin() {
           <h1 className="text-3xl md:text-5xl font-bold drop-shadow-lg">
             {tournament.name}
           </h1>
-          {tournament.course_name && (
+          {settings.showCourseName && tournament.course_name && (
             <p className="text-lg md:text-xl opacity-90">
               {tournament.course_name}
             </p>
@@ -182,8 +184,8 @@ export default function TournamentLogin() {
         {/* Instructions */}
         {settings.showInstructions && settings.instructions && (
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-6 shadow-2xl animate-fade-in-up animation-delay-300">
-            <h2 className="text-xl font-bold mb-3">📋 {settings.instructionsTitle}</h2>
-            <div className="text-left text-sm md:text-base opacity-90 whitespace-pre-wrap">
+            <h2 className="text-xl font-bold mb-3">{settings.instructionsTitle}</h2>
+            <div className="text-left text-sm md:text-base opacity-90 overflow-y-auto max-h-12 whitespace-pre-wrap">
               {settings.instructions}
             </div>
           </div>

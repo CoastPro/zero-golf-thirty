@@ -19,8 +19,10 @@ const DEFAULT_HOME_PAGE_SETTINGS = {
   welcomeMessage: "Welcome to our tournament!",
   showLogo: true,
   showSponsorLogos: true,
+  showCourseName: true,
   showInstructions: false,
   instructions: "",
+  instructionsTitle: "Instructions",
   backgroundColor: "#1e40af",
   textColor: "#ffffff",
   accentColor: "#3b82f6"
@@ -550,7 +552,7 @@ export default function TournamentSetup() {
           </div>
         </div>
 
-        {/* TOURNAMENT HOME PAGE - NEW SECTION */}
+        {/* TOURNAMENT HOME PAGE */}
         {isEditing && tournamentSlug && (
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-lg p-6 border-2 border-blue-200">
             <div className="flex items-center justify-between mb-4">
@@ -634,6 +636,16 @@ export default function TournamentSetup() {
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
+                      checked={homePageSettings.showCourseName !== undefined ? homePageSettings.showCourseName : true}
+                      onChange={(e) => setHomePageSettings({...homePageSettings, showCourseName: e.target.checked})}
+                      className="w-4 h-4 text-blue-600 rounded"
+                    />
+                    <span className="text-sm">Show Course Name</span>
+                  </label>
+
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
                       checked={homePageSettings.showSponsorLogos}
                       onChange={(e) => setHomePageSettings({...homePageSettings, showSponsorLogos: e.target.checked})}
                       className="w-4 h-4 text-blue-600 rounded"
@@ -655,17 +667,32 @@ export default function TournamentSetup() {
 
               {/* Instructions */}
               {homePageSettings.showInstructions && (
-                <div className="bg-white rounded-lg p-4 border border-blue-200">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Instructions
-                  </label>
-                  <textarea
-                    value={homePageSettings.instructions}
-                    onChange={(e) => setHomePageSettings({...homePageSettings, instructions: e.target.value})}
-                    placeholder="Enter tournament instructions here..."
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
+                <div className="bg-white rounded-lg p-4 border border-blue-200 space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Instructions Title
+                    </label>
+                    <input
+                      type="text"
+                      value={homePageSettings.instructionsTitle || "Instructions"}
+                      onChange={(e) => setHomePageSettings({...homePageSettings, instructionsTitle: e.target.value})}
+                      placeholder="Instructions"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Instructions Content
+                    </label>
+                    <textarea
+                      value={homePageSettings.instructions}
+                      onChange={(e) => setHomePageSettings({...homePageSettings, instructions: e.target.value})}
+                      placeholder="Enter tournament instructions here..."
+                      rows={4}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -780,9 +807,7 @@ export default function TournamentSetup() {
           </div>
         )}
 
-        {/* Rest of your existing sections... */}
-        {/* (I'll continue with the remaining sections in the next message) */}
-{/* Leaderboard Settings */}
+        {/* Leaderboard Settings */}
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-xl font-semibold mb-4">Leaderboard Settings</h3>
           <p className="text-sm text-gray-600 mb-6">
