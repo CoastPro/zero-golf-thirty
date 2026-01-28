@@ -113,7 +113,8 @@ export default function TournamentSetup() {
       if (data) {
         setName(data.name);
         setCourseName(data.course_name || '');
-        setTournamentDate(data.tournament_date || '');
+        // Fix timezone: extract just the date part without converting to Date object
+        setTournamentDate(data.tournament_date ? data.tournament_date.split('T')[0] : '');
         setFormat(data.format);
         setCoursePar(data.course_par);
         setShowHandicaps(data.show_handicaps);
@@ -1277,7 +1278,7 @@ export default function TournamentSetup() {
             disabled={loading}
             className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
           >
-            <Save className="w-5 h-4" />
+            <Save className="w-5 h-5" />
             {loading ? 'Saving...' : isEditing ? 'Update Tournament' : 'Create Tournament'}
           </button>
         </div>
