@@ -4,6 +4,28 @@ import { ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Tournament } from '../types/database.types';
 
+interface HomePageSettings {
+  welcomeMessage: string;
+  showLogo: boolean;
+  showSponsorLogos: boolean;
+  showInstructions: boolean;
+  instructions: string;
+  backgroundColor: string;
+  textColor: string;
+  accentColor: string;
+}
+
+const defaultSettings: HomePageSettings = {
+  welcomeMessage: "Welcome to our tournament!",
+  showLogo: true,
+  showSponsorLogos: true,
+  showInstructions: false,
+  instructions: "",
+  backgroundColor: "#1e40af",
+  textColor: "#ffffff",
+  accentColor: "#3b82f6"
+};
+
 export default function TournamentLogin() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -11,6 +33,7 @@ export default function TournamentLogin() {
   const [playerPhone, setPlayerPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
     loadTournament();
@@ -28,6 +51,8 @@ export default function TournamentLogin() {
       setTournament(data);
     } catch (error) {
       console.error('Error loading tournament:', error);
+    } finally {
+      setPageLoading(false);
     }
   };
 
@@ -66,6 +91,14 @@ export default function TournamentLogin() {
         return;
       }
 
+      // Store player info in sessionStorage
+      sessionStorage.setItem('playerAuth', JSON.stringify({
+        playerId: player.id,
+        playerName: player.name,
+        groupId: groupId,
+        tournamentId: tournament?.id
+      }));
+
       navigate(`/tournament/${tournament?.id}/score?group=${groupId}`);
     } catch (error) {
       console.error('Player login error:', error);
@@ -75,110 +108,191 @@ export default function TournamentLogin() {
     }
   };
 
-  if (!tournament) {
-    return <div className="text-center py-12">Loading tournament...</div>;
+  if (pageLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-xl text-gray-600">Loading tournament...</div>
+      </div>
+    );
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100 px-4 py-8">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          {/* Tournament Logo */}
-          {tournament.tournament_logo_url && (
-            <div className="flex justify-center mb-6">
-              <img 
-                src={tournament.tournament_logo_url} 
-                alt="Tournament Logo" 
-                className="h-24 object-contain"
-              />
-            </div>
-          )}
+  if (!tournament) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-2">Tournament Not Found</h1>
+          <p className="text-gray-600">Please check your link and try again.</p>
+        </div>
+      </div>
+    );
+  }
 
-          {/* Tournament Name */}
-          <h1 className="text-2xl font-bold text-center text-gray-900 mb-2">
+  // Get settings from database or use defaults
+  const settings: HomePageSettings = (tournament as any).home_page_settings || defaultSettings;
+
+  return (
+    <div 
+      className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden"
+      style={{ 
+        backgroundColor: settings.backgroundColor,
+        color: settings.textColor 
+      }}
+    >
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 35px, ${settings.textColor} 35px, ${settings.textColor} 36px)`
+        }}></div>
+      </div>
+
+      <div className="w-full max-w-2xl space-y-8 relative z-10">
+        
+        {/* Tournament Logo */}
+        {settings.showLogo && tournament.tournament_logo_url && (
+          <div className="flex justify-center animate-fade-in">
+            <img 
+              src={tournament.tournament_logo_url} 
+              alt="Tournament Logo" 
+              className="max-h-40 object-contain drop-shadow-2xl"
+            />
+          </div>
+        )}
+
+        {/* Tournament Name */}
+        <div className="text-center space-y-2 animate-fade-in-up">
+          <h1 className="text-4xl md:text-6xl font-bold drop-shadow-lg">
             {tournament.name}
           </h1>
           {tournament.course_name && (
-            <p className="text-center text-gray-600 mb-6">
+            <p className="text-xl md:text-2xl opacity-90">
               {tournament.course_name}
             </p>
           )}
+        </div>
 
-          {/* Sponsor Logo */}
-          {tournament.tournament_sponsor_logo_url && (
-            <div className="flex justify-center mb-6">
-              <img 
-                src={tournament.tournament_sponsor_logo_url} 
-                alt="Sponsor Logo" 
-                className="h-16 object-contain"
+        {/* Welcome Message */}
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 md:p-8 text-center shadow-2xl animate-fade-in-up animation-delay-200">
+          <p className="text-lg md:text-xl font-medium">
+            {settings.welcomeMessage}
+          </p>
+        </div>
+
+        {/* Instructions */}
+        {settings.showInstructions && settings.instructions && (
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 md:p-8 shadow-2xl animate-fade-in-up animation-delay-300">
+            <h2 className="text-2xl font-bold mb-4">📋 Instructions</h2>
+            <div className="text-left space-y-2 opacity-90 whitespace-pre-wrap">
+              {settings.instructions}
+            </div>
+          </div>
+        )}
+
+        {/* Login Form */}
+        <div className="bg-white/15 backdrop-blur-md rounded-2xl p-6 md:p-8 shadow-2xl animate-fade-in-up animation-delay-400">
+          <h2 className="text-2xl font-bold mb-6 text-center">Player Login</h2>
+          
+          <form onSubmit={handlePlayerLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2 opacity-90">
+                Enter Last 4 Digits of Your Phone Number
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={playerPhone}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  setPlayerPhone(value);
+                  setError('');
+                }}
+                placeholder="1234"
+                maxLength={4}
+                className="w-full px-4 py-4 text-2xl text-center tracking-widest rounded-xl border-2 focus:ring-4 focus:ring-opacity-50 transition-all"
+                style={{ 
+                  borderColor: settings.accentColor,
+                  color: settings.backgroundColor,
+                  backgroundColor: settings.textColor
+                }}
+                required
+                autoFocus
               />
             </div>
-          )}
-
-          {/* Player Login */}
-          <div className="mb-6">
-            <h2 className="text-lg font-bold text-center text-gray-900 mb-4">
-              Player Login
-            </h2>
-            <form onSubmit={handlePlayerLogin} className="space-y-4">
-              <div>
-                <label htmlFor="playerPhone" className="block text-sm font-medium text-gray-700 mb-2">
-                  Last 4 Digits of Phone
-                </label>
-                <input
-                  id="playerPhone"
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={4}
-                  value={playerPhone}
-                  onChange={(e) => setPlayerPhone(e.target.value.replace(/\D/g, ''))}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-center text-2xl tracking-wider focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="••••"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={loading || playerPhone.length !== 4}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Verifying...' : 'Login to Score'}
-              </button>
-            </form>
 
             {error && (
-              <div className="mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm text-center">
-                {error}
+              <div className="bg-red-500/20 border-2 border-red-500 rounded-xl p-4 text-center animate-shake">
+                <p className="font-medium">{error}</p>
               </div>
             )}
-          </div>
 
-          {/* Scoring/Leaderboard Button */}
-          <div className="mb-6">
+            <button
+              type="submit"
+              disabled={loading || playerPhone.length !== 4}
+              className="w-full py-4 px-6 rounded-xl font-bold text-xl shadow-lg hover:shadow-2xl transform hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              style={{ 
+                backgroundColor: settings.accentColor,
+                color: settings.textColor
+              }}
+            >
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Logging in...
+                </span>
+              ) : (
+                '🏌️ Enter Tournament'
+              )}
+            </button>
+          </form>
+
+          <div className="mt-6 pt-6 border-t border-white/20 text-center">
             <button
               onClick={() => navigate(`/tournament/${tournament.id}/leaderboard`)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors"
+              className="text-sm opacity-75 hover:opacity-100 underline transition-opacity"
             >
-              View Leaderboard
+              View Leaderboard →
             </button>
           </div>
+        </div>
 
-          {/* Custom Buttons */}
-          {tournament.custom_buttons && tournament.custom_buttons.length > 0 && (
-            <div className="space-y-2">
-              {tournament.custom_buttons.map((button, index) => (
-                <a
-                  key={index}
-                  href={button.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold py-3 rounded-lg transition-colors"
-                >
-                  {button.label}
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-              ))}
-            </div>
-          )}
+        {/* Sponsor Logos */}
+        {settings.showSponsorLogos && tournament.tournament_sponsor_logo_url && (
+          <div className="flex justify-center items-center gap-8 flex-wrap animate-fade-in-up animation-delay-500">
+            <img 
+              src={tournament.tournament_sponsor_logo_url} 
+              alt="Sponsor" 
+              className="max-h-16 object-contain opacity-80 hover:opacity-100 transition-opacity"
+            />
+          </div>
+        )}
+
+        {/* Custom Buttons */}
+        {tournament.custom_buttons && tournament.custom_buttons.length > 0 && (
+          <div className="space-y-3 animate-fade-in-up animation-delay-600">
+            {tournament.custom_buttons.map((button, index) => (
+              <a
+                key={index}
+                href={button.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-3 px-6 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  backdropFilter: 'blur(10px)'
+                }}
+              >
+                {button.label}
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="text-center text-sm opacity-50 pt-4">
+          Powered by Zero Golf Thirty
         </div>
       </div>
     </div>

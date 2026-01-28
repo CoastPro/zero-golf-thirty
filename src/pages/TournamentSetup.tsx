@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Save, Plus, X, GripVertical, Eye, EyeOff, ChevronUp, ChevronDown, BookOpen, Upload, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Save, Plus, X, GripVertical, Eye, EyeOff, ChevronUp, ChevronDown, BookOpen, Upload, Image as ImageIcon, Loader2, ExternalLink, Copy, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Tournament } from '../types/database.types';
 import { useAuth } from '../context/AuthContext';
@@ -13,6 +13,17 @@ const DEFAULT_STABLEFORD = {
   par: 2,
   bogey: 1,
   doublePlus: 0
+};
+
+const DEFAULT_HOME_PAGE_SETTINGS = {
+  welcomeMessage: "Welcome to our tournament!",
+  showLogo: true,
+  showSponsorLogos: true,
+  showInstructions: false,
+  instructions: "",
+  backgroundColor: "#1e40af",
+  textColor: "#ffffff",
+  accentColor: "#3b82f6"
 };
 
 type LeaderboardTab = 'gross' | 'stableford' | 'skins';
@@ -53,6 +64,11 @@ export default function TournamentSetup() {
   const [leaderboardHiddenTabs, setLeaderboardHiddenTabs] = useState<LeaderboardTab[]>([]);
   
   const [savedCourses, setSavedCourses] = useState<any[]>([]);
+
+  // Home Page Settings
+  const [tournamentSlug, setTournamentSlug] = useState('');
+  const [homePageSettings, setHomePageSettings] = useState(DEFAULT_HOME_PAGE_SETTINGS);
+  const [urlCopied, setUrlCopied] = useState(false);
 
   useEffect(() => {
     if (isEditing) {
@@ -111,6 +127,10 @@ export default function TournamentSetup() {
         setPlayerInstructions(data.player_instructions || '');
         setLeaderboardLogoLeft(data.leaderboard_logo_left || '');
         setLeaderboardLogoRight(data.leaderboard_logo_right || '');
+        setTournamentSlug(data.slug || '');
+        
+        // Load home page settings
+        setHomePageSettings((data as any).home_page_settings || DEFAULT_HOME_PAGE_SETTINGS);
         
         // Load leaderboard settings
         if (data.leaderboard_settings) {
@@ -170,6 +190,13 @@ export default function TournamentSetup() {
       }
       uploadImage(file, type);
     }
+  };
+
+  const copyLoginUrl = () => {
+    const url = `${window.location.origin}/tournament/${tournamentSlug}/login`;
+    navigator.clipboard.writeText(url);
+    setUrlCopied(true);
+    setTimeout(() => setUrlCopied(false), 2000);
   };
 
   const addFlight = () => {
@@ -244,6 +271,7 @@ export default function TournamentSetup() {
           tabs: leaderboardTabOrder,
           hidden: leaderboardHiddenTabs
         },
+        home_page_settings: homePageSettings,
         created_by: user?.id || null,
         visible_to_players: true
       };
@@ -522,7 +550,239 @@ export default function TournamentSetup() {
           </div>
         </div>
 
-        {/* Leaderboard Settings */}
+        {/* TOURNAMENT HOME PAGE - NEW SECTION */}
+        {isEditing && tournamentSlug && (
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-lg p-6 border-2 border-blue-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-blue-900">🏠 Tournament Home Page</h3>
+              <a
+                href={`/tournament/${tournamentSlug}/login`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Preview
+              </a>
+            </div>
+
+            {/* Player Login URL */}
+            <div className="mb-6 bg-white rounded-lg p-4 border border-blue-200">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Player Login URL
+              </label>
+              <p className="text-xs text-gray-600 mb-3">
+                Share this link with players. They'll login with last 4 digits of their phone number.
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={`${window.location.origin}/tournament/${tournamentSlug}/login`}
+                  readOnly
+                  className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={copyLoginUrl}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                >
+                  {urlCopied ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      Copy
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Customization Options */}
+            <div className="space-y-6">
+              {/* Welcome Message */}
+              <div className="bg-white rounded-lg p-4 border border-blue-200">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Welcome Message
+                </label>
+                <input
+                  type="text"
+                  value={homePageSettings.welcomeMessage}
+                  onChange={(e) => setHomePageSettings({...homePageSettings, welcomeMessage: e.target.value})}
+                  placeholder="Welcome to our tournament!"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Display Options */}
+              <div className="bg-white rounded-lg p-4 border border-blue-200">
+                <h4 className="font-semibold text-gray-900 mb-3">Display Options</h4>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={homePageSettings.showLogo}
+                      onChange={(e) => setHomePageSettings({...homePageSettings, showLogo: e.target.checked})}
+                      className="w-4 h-4 text-blue-600 rounded"
+                    />
+                    <span className="text-sm">Show Tournament Logo</span>
+                  </label>
+
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={homePageSettings.showSponsorLogos}
+                      onChange={(e) => setHomePageSettings({...homePageSettings, showSponsorLogos: e.target.checked})}
+                      className="w-4 h-4 text-blue-600 rounded"
+                    />
+                    <span className="text-sm">Show Sponsor Logos</span>
+                  </label>
+
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={homePageSettings.showInstructions}
+                      onChange={(e) => setHomePageSettings({...homePageSettings, showInstructions: e.target.checked})}
+                      className="w-4 h-4 text-blue-600 rounded"
+                    />
+                    <span className="text-sm">Show Instructions Section</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              {homePageSettings.showInstructions && (
+                <div className="bg-white rounded-lg p-4 border border-blue-200">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Instructions
+                  </label>
+                  <textarea
+                    value={homePageSettings.instructions}
+                    onChange={(e) => setHomePageSettings({...homePageSettings, instructions: e.target.value})}
+                    placeholder="Enter tournament instructions here..."
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                </div>
+              )}
+
+              {/* Color Scheme */}
+              <div className="bg-white rounded-lg p-4 border border-blue-200">
+                <h4 className="font-semibold text-gray-900 mb-3">Color Scheme</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Background</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={homePageSettings.backgroundColor}
+                        onChange={(e) => setHomePageSettings({...homePageSettings, backgroundColor: e.target.value})}
+                        className="w-10 h-10 rounded cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={homePageSettings.backgroundColor}
+                        onChange={(e) => setHomePageSettings({...homePageSettings, backgroundColor: e.target.value})}
+                        className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Text</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={homePageSettings.textColor}
+                        onChange={(e) => setHomePageSettings({...homePageSettings, textColor: e.target.value})}
+                        className="w-10 h-10 rounded cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={homePageSettings.textColor}
+                        onChange={(e) => setHomePageSettings({...homePageSettings, textColor: e.target.value})}
+                        className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Buttons</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={homePageSettings.accentColor}
+                        onChange={(e) => setHomePageSettings({...homePageSettings, accentColor: e.target.value})}
+                        className="w-10 h-10 rounded cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={homePageSettings.accentColor}
+                        onChange={(e) => setHomePageSettings({...homePageSettings, accentColor: e.target.value})}
+                        className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Presets */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-2">Quick Presets</label>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setHomePageSettings({...homePageSettings, backgroundColor: '#1e40af', textColor: '#ffffff', accentColor: '#3b82f6'})}
+                      className="p-2 rounded-lg border-2 border-blue-700 hover:scale-105 transition-transform text-white text-xs font-semibold"
+                      style={{backgroundColor: '#1e40af'}}
+                    >
+                      Blue
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHomePageSettings({...homePageSettings, backgroundColor: '#065f46', textColor: '#ffffff', accentColor: '#10b981'})}
+                      className="p-2 rounded-lg border-2 border-green-700 hover:scale-105 transition-transform text-white text-xs font-semibold"
+                      style={{backgroundColor: '#065f46'}}
+                    >
+                      Green
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHomePageSettings({...homePageSettings, backgroundColor: '#7c2d12', textColor: '#ffffff', accentColor: '#f97316'})}
+                      className="p-2 rounded-lg border-2 border-orange-700 hover:scale-105 transition-transform text-white text-xs font-semibold"
+                      style={{backgroundColor: '#7c2d12'}}
+                    >
+                      Orange
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHomePageSettings({...homePageSettings, backgroundColor: '#7e22ce', textColor: '#ffffff', accentColor: '#a855f7'})}
+                      className="p-2 rounded-lg border-2 border-purple-700 hover:scale-105 transition-transform text-white text-xs font-semibold"
+                      style={{backgroundColor: '#7e22ce'}}
+                    >
+                      Purple
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHomePageSettings({...homePageSettings, backgroundColor: '#1f2937', textColor: '#ffffff', accentColor: '#6b7280'})}
+                      className="p-2 rounded-lg border-2 border-gray-700 hover:scale-105 transition-transform text-white text-xs font-semibold"
+                      style={{backgroundColor: '#1f2937'}}
+                    >
+                      Dark
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Rest of your existing sections... */}
+        {/* (I'll continue with the remaining sections in the next message) */}
+{/* Leaderboard Settings */}
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-xl font-semibold mb-4">Leaderboard Settings</h3>
           <p className="text-sm text-gray-600 mb-6">
@@ -992,7 +1252,7 @@ export default function TournamentSetup() {
             disabled={loading}
             className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
           >
-            <Save className="w-5 h-5" />
+            <Save className="w-5 h-4" />
             {loading ? 'Saving...' : isEditing ? 'Update Tournament' : 'Create Tournament'}
           </button>
         </div>
