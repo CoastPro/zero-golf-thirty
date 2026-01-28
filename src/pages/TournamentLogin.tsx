@@ -136,7 +136,7 @@ export default function TournamentLogin() {
 
   return (
     <div 
-      className="min-h-screen flex flex-col items-center justify-center p-4 py-8 relative overflow-hidden"
+      className="min-h-screen flex flex-col items-center justify-center p-4 py-4 relative overflow-hidden"
       style={{ 
         backgroundColor: settings.backgroundColor,
         color: settings.textColor 
@@ -149,7 +149,7 @@ export default function TournamentLogin() {
         }}></div>
       </div>
 
-      <div className="w-full max-w-2xl space-y-4 relative z-10">
+      <div className="w-full max-w-2xl space-y-3 relative z-10">
         
         {/* Tournament Logo */}
         {settings.showLogo && tournament.logo_url && (
@@ -157,7 +157,7 @@ export default function TournamentLogin() {
             <img 
               src={tournament.logo_url} 
               alt="Tournament Logo" 
-              className="max-h-24 md:max-h-32 object-contain drop-shadow-2xl"
+              className="max-h-20 md:max-h-32 object-contain drop-shadow-2xl"
             />
           </div>
         )}
@@ -174,7 +174,7 @@ export default function TournamentLogin() {
           )}
         </div>
 
-        {/* Sponsor Logos - MOVED HERE */}
+        {/* Sponsor Logos */}
         {settings.showSponsorLogos && (tournament.sponsor_logo_url || tournament.sponsor_logo_2_url) && (
           <div className="flex justify-center items-center gap-6 flex-wrap animate-fade-in-up animation-delay-200">
             {tournament.sponsor_logo_url && (
@@ -195,21 +195,20 @@ export default function TournamentLogin() {
         )}
 
         {/* Welcome Message */}
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-6 text-center shadow-2xl animate-fade-in-up animation-delay-300">
-          <p className="text-base md:text-lg font-medium">
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-6 shadow-2xl animate-fade-in-up animation-delay-300 flex items-center justify-center min-h-[4rem] overflow-y-auto max-h-24">
+          <p className="text-base md:text-lg font-medium text-center">
             {settings.welcomeMessage}
           </p>
         </div>
 
-        {/* Instructions - LIMITED TO 2 LINES WITH SCROLL */}
+        {/* Instructions */}
         {settings.showInstructions && settings.instructions && (
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-6 shadow-2xl animate-fade-in-up animation-delay-400">
-            <h2 className="text-xl font-bold mb-3">{settings.instructionsTitle}</h2>
+            <h2 className="text-xl font-bold mb-2 text-center">{settings.instructionsTitle}</h2>
             <div 
-              className="text-left text-sm md:text-base opacity-90 whitespace-pre-wrap overflow-y-auto" 
+              className="text-center text-sm md:text-base opacity-90 whitespace-pre-wrap overflow-y-auto flex items-center justify-center min-h-[2rem]" 
               style={{ 
-                maxHeight: '3rem', // Approximately 2 lines
-                lineHeight: '1.5rem'
+                maxHeight: '4rem'
               }}
             >
               {settings.instructions}
