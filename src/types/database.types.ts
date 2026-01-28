@@ -26,10 +26,25 @@ export interface Tournament {
   leaderboard_logo_right?: string | null;
   created_by?: string | null;
   visible_to_players: boolean;
-slug?: string | null;
-tournament_logo_url?: string | null;
-tournament_sponsor_logo_url?: string | null;
-custom_buttons?: CustomButton[];
+  slug?: string | null;
+  logo_url?: string | null;
+  sponsor_logo_url?: string | null;
+  sponsor_logo_2_url?: string | null;
+  tournament_logo_url?: string | null;
+  tournament_sponsor_logo_url?: string | null;
+  custom_buttons?: CustomButton[];
+  player_instructions?: string | null;
+  home_page_settings?: {
+    welcomeMessage: string;
+    showLogo: boolean;
+    showSponsorLogos: boolean;
+    showInstructions: boolean;
+    instructions: string;
+    instructionsTitle: string;
+    backgroundColor: string;
+    textColor: string;
+    accentColor: string;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -135,6 +150,7 @@ export interface TournamentAccess {
   granted_by: string | null;
   created_at: string;
 }
+
 export interface CustomButton {
   label: string;
   url: string;
