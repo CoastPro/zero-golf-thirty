@@ -46,36 +46,34 @@ export default function TournamentList() {
         .select('*')
         .order('created_at', { ascending: false });
 
-if (user?.role === 'sub_admin') {
-  // Sub-admin sees: tournaments they created + tournaments shared with them
-  const { data: sharedTournamentIds } = await supabase
-    .from('tournament_access')
-    .select('tournament_id')
-    .eq('user_id', user.id);
+      if (user?.role === 'sub_admin') {
+        // Sub-admin sees: tournaments they created + tournaments shared with them
+        const { data: sharedTournamentIds } = await supabase
+          .from('tournament_access')
+          .select('tournament_id')
+          .eq('user_id', user.id);
 
-  const sharedIds = sharedTournamentIds?.map(t => t.tournament_id) || [];
+        const sharedIds = sharedTournamentIds?.map(t => t.tournament_id) || [];
 
-  // Build query differently based on whether there are shared tournaments
-  let subAdminQuery = supabase
-    .from('tournaments')
-    .select('*');
+        // Build query differently based on whether there are shared tournaments
+        let subAdminQuery = supabase
+          .from('tournaments')
+          .select('*');
 
-  if (sharedIds.length > 0) {
-    // Has shared tournaments: created_by OR in shared list
-    subAdminQuery = subAdminQuery.or(`created_by.eq.${user.id},id.in.(${sharedIds.join(',')})`);
-  } else {
-    // No shared tournaments: only created_by
-    subAdminQuery = subAdminQuery.eq('created_by', user.id);
-  }
+        if (sharedIds.length > 0) {
+          // Has shared tournaments: created_by OR in shared list
+          subAdminQuery = subAdminQuery.or(`created_by.eq.${user.id},id.in.(${sharedIds.join(',')})`);
+        } else {
+          // No shared tournaments: only created_by
+          subAdminQuery = subAdminQuery.eq('created_by', user.id);
+        }
 
-  const { data: tournamentsData, error: tournamentsError } = await subAdminQuery
-    .order('created_at', { ascending: false });
+        const { data: tournamentsData, error: tournamentsError } = await subAdminQuery
+          .order('created_at', { ascending: false });
 
-  if (tournamentsError) throw tournamentsError;
-  setTournaments(tournamentsData || []);
-}
-
-else {
+        if (tournamentsError) throw tournamentsError;
+        setTournaments(tournamentsData || []);
+      } else {
         // Master admin sees all tournaments
         const { data, error } = await query;
         if (error) throw error;
@@ -179,6 +177,13 @@ else {
     return tournamentAccess.some(
       a => a.tournament_id === tournament.id && a.user_id === user?.id
     );
+  };
+
+  const formatDate = (dateString: string | null): string => {
+    if (!dateString) return 'No date';
+    // Add T00:00:00 to force local timezone interpretation
+    const date = new Date(dateString + 'T00:00:00');
+    return date.toLocaleDateString();
   };
 
   if (!user) return null;
@@ -297,7 +302,7 @@ else {
                         {tournament.tournament_date && (
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            {new Date(tournament.tournament_date).toLocaleDateString()}
+                            {formatDate(tournament.tournament_date)}
                           </div>
                         )}
                         <div className="flex items-center gap-1">
@@ -342,7 +347,7 @@ else {
                       </div>
                       {sharedUsers.length > 0 && (
                         <p className="text-xs text-gray-500 text-center mt-1">
-                        {`${window.location.origin}/tournament/${tournament.slug || tournament.id}/login`}
+                          {`${window.location.origin}/tournament/${tournament.slug || tournament.id}/login`}
                         </p>
                       )}
                     </div>
@@ -380,11 +385,11 @@ else {
                     </Link>
                   </div>
                 </div>
-             );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
 }
