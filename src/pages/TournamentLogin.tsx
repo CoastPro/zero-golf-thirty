@@ -174,25 +174,51 @@ export default function TournamentLogin() {
           )}
         </div>
 
+        {/* Sponsor Logos - MOVED HERE */}
+        {settings.showSponsorLogos && (tournament.sponsor_logo_url || tournament.sponsor_logo_2_url) && (
+          <div className="flex justify-center items-center gap-6 flex-wrap animate-fade-in-up animation-delay-200">
+            {tournament.sponsor_logo_url && (
+              <img 
+                src={tournament.sponsor_logo_url} 
+                alt="Sponsor" 
+                className="max-h-12 md:max-h-16 object-contain opacity-80 hover:opacity-100 transition-opacity"
+              />
+            )}
+            {tournament.sponsor_logo_2_url && (
+              <img 
+                src={tournament.sponsor_logo_2_url} 
+                alt="Sponsor" 
+                className="max-h-12 md:max-h-16 object-contain opacity-80 hover:opacity-100 transition-opacity"
+              />
+            )}
+          </div>
+        )}
+
         {/* Welcome Message */}
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-6 text-center shadow-2xl animate-fade-in-up animation-delay-200">
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-6 text-center shadow-2xl animate-fade-in-up animation-delay-300">
           <p className="text-base md:text-lg font-medium">
             {settings.welcomeMessage}
           </p>
         </div>
 
-        {/* Instructions */}
+        {/* Instructions - LIMITED TO 2 LINES WITH SCROLL */}
         {settings.showInstructions && settings.instructions && (
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-6 shadow-2xl animate-fade-in-up animation-delay-300">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-6 shadow-2xl animate-fade-in-up animation-delay-400">
             <h2 className="text-xl font-bold mb-3">{settings.instructionsTitle}</h2>
-            <div className="text-left text-sm md:text-base opacity-90 overflow-y-auto max-h-12 whitespace-pre-wrap">
+            <div 
+              className="text-left text-sm md:text-base opacity-90 whitespace-pre-wrap overflow-y-auto" 
+              style={{ 
+                maxHeight: '3rem', // Approximately 2 lines
+                lineHeight: '1.5rem'
+              }}
+            >
               {settings.instructions}
             </div>
           </div>
         )}
 
         {/* Login Form */}
-        <div className="bg-white/15 backdrop-blur-md rounded-2xl p-4 md:p-6 shadow-2xl animate-fade-in-up animation-delay-400">
+        <div className="bg-white/15 backdrop-blur-md rounded-2xl p-4 md:p-6 shadow-2xl animate-fade-in-up animation-delay-500">
           <h2 className="text-xl font-bold mb-4 text-center">Player Login</h2>
           
           <form onSubmit={handlePlayerLogin} className="space-y-3">
@@ -260,26 +286,6 @@ export default function TournamentLogin() {
             </button>
           </div>
         </div>
-
-        {/* Sponsor Logos */}
-        {settings.showSponsorLogos && (tournament.sponsor_logo_url || tournament.sponsor_logo_2_url) && (
-          <div className="flex justify-center items-center gap-6 flex-wrap animate-fade-in-up animation-delay-500">
-            {tournament.sponsor_logo_url && (
-              <img 
-                src={tournament.sponsor_logo_url} 
-                alt="Sponsor" 
-                className="max-h-12 md:max-h-16 object-contain opacity-80 hover:opacity-100 transition-opacity"
-              />
-            )}
-            {tournament.sponsor_logo_2_url && (
-              <img 
-                src={tournament.sponsor_logo_2_url} 
-                alt="Sponsor" 
-                className="max-h-12 md:max-h-16 object-contain opacity-80 hover:opacity-100 transition-opacity"
-              />
-            )}
-          </div>
-        )}
 
         {/* Custom Buttons */}
         {tournament.custom_buttons && tournament.custom_buttons.length > 0 && (
