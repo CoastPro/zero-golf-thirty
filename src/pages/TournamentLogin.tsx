@@ -30,11 +30,18 @@ const defaultSettings: HomePageSettings = {
   accentColor: "#3b82f6"
 };
 
+interface PlayerMatch {
+  id: string;
+  name: string;
+  group_id: string;
+}
+
 export default function TournamentLogin() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [playerPhone, setPlayerPhone] = useState('');
+  const [matchedPlayers, setMatchedPlayers] = useState<PlayerMatch[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
@@ -60,10 +67,11 @@ export default function TournamentLogin() {
     }
   };
 
-  const handlePlayerLogin = async (e: React.FormEvent) => {
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    setMatchedPlayers([]);
 
     try {
       if (playerPhone.length !== 4) {
@@ -74,7 +82,7 @@ export default function TournamentLogin() {
 
       const { data: players, error: playerError } = await supabase
         .from('players')
-        .select('*, group_players!inner(group_id)')
+        .select('id, name, group_players!inner(group_id)')
         .eq('tournament_id', tournament?.id)
         .like('phone', `%${playerPhone}`);
 
@@ -86,30 +94,62 @@ export default function TournamentLogin() {
         return;
       }
 
-      const player = players[0];
-      const groupId = player.group_players?.[0]?.group_id;
+      // Filter to exact match of last 4 digits and check for group assignment
+      const exactMatches = players.filter(p => p.phone?.slice(-4) === playerPhone);
 
-      if (!groupId) {
+      if (exactMatches.length === 0) {
+        setError('Phone number not found. Please check with your tournament organizer.');
+        setLoading(false);
+        return;
+      }
+
+      // Check if players have groups
+      const playersWithGroups = exactMatches.filter(p => 
+        p.group_players && p.group_players.length > 0
+      );
+
+      if (playersWithGroups.length === 0) {
         setError('You have not been assigned to a group yet.');
         setLoading(false);
         return;
       }
 
-      // Store player info in sessionStorage
-      sessionStorage.setItem('playerAuth', JSON.stringify({
-        playerId: player.id,
-        playerName: player.name,
-        groupId: groupId,
-        tournamentId: tournament?.id
-      }));
-
-      navigate(`/tournament/${tournament?.id}/score?group=${groupId}`);
+      // If only one match, log them in directly
+      if (playersWithGroups.length === 1) {
+        loginPlayer(playersWithGroups[0]);
+      } else {
+        // Multiple matches - show selection
+        const playerMatches: PlayerMatch[] = playersWithGroups.map(p => ({
+          id: p.id,
+          name: p.name,
+          group_id: p.group_players[0].group_id
+        }));
+        setMatchedPlayers(playerMatches);
+        setLoading(false);
+      }
     } catch (error) {
       console.error('Player login error:', error);
       setError('Login failed. Please try again.');
-    } finally {
       setLoading(false);
     }
+  };
+
+  const loginPlayer = (player: any) => {
+    const groupId = player.group_players?.[0]?.group_id || player.group_id;
+
+    // Store player info in sessionStorage
+    sessionStorage.setItem('playerAuth', JSON.stringify({
+      playerId: player.id,
+      playerName: player.name,
+      groupId: groupId,
+      tournamentId: tournament?.id
+    }));
+
+    navigate(`/tournament/${tournament?.id}/score?group=${groupId}`);
+  };
+
+  const handlePlayerSelect = (player: PlayerMatch) => {
+    loginPlayer({ ...player, group_players: [{ group_id: player.group_id }] });
   };
 
   if (pageLoading) {
@@ -216,65 +256,103 @@ export default function TournamentLogin() {
           </div>
         )}
 
-        {/* Login Form */}
+        {/* Login Form or Player Selection */}
         <div className="bg-white/15 backdrop-blur-md rounded-2xl p-4 md:p-6 shadow-2xl animate-fade-in-up animation-delay-500">
-          <h2 className="text-xl font-bold mb-4 text-center">Player Login</h2>
-          
-          <form onSubmit={handlePlayerLogin} className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium mb-2 opacity-90">
-                Enter Last 4 Digits of Your Phone Number
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={playerPhone}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-                  setPlayerPhone(value);
+          {matchedPlayers.length === 0 ? (
+            <>
+              <h2 className="text-xl font-bold mb-4 text-center">Player Login</h2>
+              
+              <form onSubmit={handlePhoneSubmit} className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-2 opacity-90">
+                    Enter Last 4 Digits of Your Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={playerPhone}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      setPlayerPhone(value);
+                      setError('');
+                    }}
+                    placeholder="1234"
+                    maxLength={4}
+                    className="w-full px-4 py-3 text-xl text-center tracking-widest rounded-xl border-2 focus:ring-4 focus:ring-opacity-50 transition-all"
+                    style={{ 
+                      borderColor: settings.accentColor,
+                      color: settings.backgroundColor,
+                      backgroundColor: settings.textColor
+                    }}
+                    required
+                    autoFocus
+                  />
+                </div>
+
+                {error && (
+                  <div className="bg-red-500/20 border-2 border-red-500 rounded-xl p-3 text-center animate-shake">
+                    <p className="font-medium text-sm">{error}</p>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading || playerPhone.length !== 4}
+                  className="w-full py-3 px-6 rounded-xl font-bold text-lg shadow-lg hover:shadow-2xl transform hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  style={{ 
+                    backgroundColor: settings.accentColor,
+                    color: settings.textColor
+                  }}
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Checking...
+                    </span>
+                  ) : (
+                    '→ Continue'
+                  )}
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <h2 className="text-xl font-bold mb-4 text-center">Select Your Name</h2>
+              <p className="text-sm opacity-90 mb-4 text-center">
+                Multiple players found with phone ending in {playerPhone}
+              </p>
+              
+              <div className="space-y-2">
+                {matchedPlayers.map((player) => (
+                  <button
+                    key={player.id}
+                    onClick={() => handlePlayerSelect(player)}
+                    className="w-full py-4 px-6 rounded-xl font-bold text-lg shadow-lg hover:shadow-2xl transform hover:scale-105 active:scale-95 transition-all"
+                    style={{ 
+                      backgroundColor: settings.accentColor,
+                      color: settings.textColor
+                    }}
+                  >
+                    {player.name}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => {
+                  setMatchedPlayers([]);
+                  setPlayerPhone('');
                   setError('');
                 }}
-                placeholder="1234"
-                maxLength={4}
-                className="w-full px-4 py-3 text-xl text-center tracking-widest rounded-xl border-2 focus:ring-4 focus:ring-opacity-50 transition-all"
-                style={{ 
-                  borderColor: settings.accentColor,
-                  color: settings.backgroundColor,
-                  backgroundColor: settings.textColor
-                }}
-                required
-                autoFocus
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-500/20 border-2 border-red-500 rounded-xl p-3 text-center animate-shake">
-                <p className="font-medium text-sm">{error}</p>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading || playerPhone.length !== 4}
-              className="w-full py-3 px-6 rounded-xl font-bold text-lg shadow-lg hover:shadow-2xl transform hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-              style={{ 
-                backgroundColor: settings.accentColor,
-                color: settings.textColor
-              }}
-            >
-              {loading ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Logging in...
-                </span>
-              ) : (
-                '🏌️ Enter Tournament'
-              )}
-            </button>
-          </form>
+                className="w-full mt-4 py-2 text-sm opacity-75 hover:opacity-100 underline transition-opacity"
+              >
+                ← Back to phone entry
+              </button>
+            </>
+          )}
 
           <div className="mt-4 pt-4 border-t border-white/20 text-center">
             <button
