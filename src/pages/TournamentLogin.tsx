@@ -82,7 +82,7 @@ export default function TournamentLogin() {
 
       const { data: players, error: playerError } = await supabase
         .from('players')
-        .select('id, name, group_players!inner(group_id)')
+        .select('id, name, phone, group_players!inner(group_id)')
         .eq('tournament_id', tournament?.id)
         .like('phone', `%${playerPhone}`);
 
