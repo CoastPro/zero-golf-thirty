@@ -99,11 +99,21 @@ export default function GroupManagement() {
     }
   };
 
-  const createGroups = async (count: number) => {
+const createGroups = async (count: number) => {
     try {
+      // Reload groups to get the absolute latest from database
+      const { data: latestGroups, error: fetchError } = await supabase
+        .from('groups')
+        .select('number')
+        .eq('tournament_id', id)
+        .order('number', { ascending: false })
+        .limit(1);
+
+      if (fetchError) throw fetchError;
+
       // Find the highest existing group number
-      const highestGroupNumber = groups.length > 0 
-        ? Math.max(...groups.map(g => g.number))
+      const highestGroupNumber = latestGroups && latestGroups.length > 0
+        ? latestGroups[0].number
         : 0;
 
       const groupsToCreate = Array.from({ length: count }, (_, i) => ({
