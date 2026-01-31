@@ -18,6 +18,7 @@ export default function GroupManagement() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [groups, setGroups] = useState<GroupWithPlayers[]>([]);
   const [loading, setLoading] = useState(true);
+  const [numGroupsToCreate, setNumGroupsToCreate] = useState(10);
   const [startType, setStartType] = useState<'shotgun' | 'teetimes'>('shotgun');
   const [useMultipleTees, setUseMultipleTees] = useState(false);
   const [startTime, setStartTime] = useState('08:00');
@@ -99,7 +100,7 @@ export default function GroupManagement() {
     }
   };
 
-const createGroups = async (count: number) => {
+  const createGroups = async (count: number) => {
     try {
       // Reload groups to get the absolute latest from database
       const { data: latestGroups, error: fetchError } = await supabase
@@ -433,14 +434,27 @@ const createGroups = async (count: number) => {
 
       {groups.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h3 className="text-lg font-semibold mb-4">Create Your First Group</h3>
-          <button
-            onClick={addSingleGroup}
-            className="flex items-center gap-2 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            Add A Group
-          </button>
+          <h3 className="text-lg font-semibold mb-4">Create Groups</h3>
+          <div className="flex items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">
+              Number of groups to create:
+            </label>
+            <input
+              type="number"
+              value={numGroupsToCreate}
+              onChange={(e) => setNumGroupsToCreate(parseInt(e.target.value) || 1)}
+              min="1"
+              max="36"
+              className="w-24 px-4 py-2 border border-gray-300 rounded-lg"
+            />
+            <button
+              onClick={() => createGroups(numGroupsToCreate)}
+              className="flex items-center gap-2 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Create Groups
+            </button>
+          </div>
         </div>
       ) : (
         <>
