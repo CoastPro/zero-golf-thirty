@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Users, ArrowRight, Trash2, Clock, Target, QrCode, Download, Link2, Check, Printer, FileText } from 'lucide-react';
+import { Plus, Users, ArrowRight, Trash2, Clock, Target, QrCode, Download, Link2, Check, Printer, FileText, Edit2 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { supabase } from '../lib/supabase';
 import { Player, Group, Tournament } from '../types/database.types';
@@ -18,7 +18,6 @@ export default function GroupManagement() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [groups, setGroups] = useState<GroupWithPlayers[]>([]);
   const [loading, setLoading] = useState(true);
-  const [numGroupsToCreate, setNumGroupsToCreate] = useState(10);
   const [startType, setStartType] = useState<'shotgun' | 'teetimes'>('shotgun');
   const [useMultipleTees, setUseMultipleTees] = useState(false);
   const [startTime, setStartTime] = useState('08:00');
@@ -27,6 +26,8 @@ export default function GroupManagement() {
   const [copiedGroupId, setCopiedGroupId] = useState<string | null>(null);
   const [printScorecardGroupId, setPrintScorecardGroupId] = useState<string | null>(null);
   const [printPlacardGroupId, setPrintPlacardGroupId] = useState<string | null>(null);
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [editingGroupNumber, setEditingGroupNumber] = useState<number>(0);
 
   useEffect(() => {
     loadData();
@@ -98,11 +99,16 @@ export default function GroupManagement() {
     }
   };
 
-  const createGroups = async () => {
+  const createGroups = async (count: number) => {
     try {
-      const groupsToCreate = Array.from({ length: numGroupsToCreate }, (_, i) => ({
+      // Find the highest existing group number
+      const highestGroupNumber = groups.length > 0 
+        ? Math.max(...groups.map(g => g.number))
+        : 0;
+
+      const groupsToCreate = Array.from({ length: count }, (_, i) => ({
         tournament_id: id,
-        number: i + 1
+        number: highestGroupNumber + i + 1
       }));
 
       const { error } = await supabase
@@ -114,6 +120,33 @@ export default function GroupManagement() {
     } catch (error) {
       console.error('Error creating groups:', error);
       alert('Failed to create groups');
+    }
+  };
+
+  const addSingleGroup = async () => {
+    await createGroups(1);
+  };
+
+  const updateGroupNumber = async (groupId: string, newNumber: number) => {
+    try {
+      // Check if the number is already taken
+      const existingGroup = groups.find(g => g.number === newNumber && g.id !== groupId);
+      if (existingGroup) {
+        alert(`Group ${newNumber} already exists!`);
+        return;
+      }
+
+      const { error } = await supabase
+        .from('groups')
+        .update({ number: newNumber })
+        .eq('id', groupId);
+
+      if (error) throw error;
+      setEditingGroupId(null);
+      loadData();
+    } catch (error) {
+      console.error('Error updating group number:', error);
+      alert('Failed to update group number');
     }
   };
 
@@ -390,27 +423,14 @@ export default function GroupManagement() {
 
       {groups.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h3 className="text-lg font-semibold mb-4">Create Groups</h3>
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-gray-700">
-              Number of groups:
-            </label>
-            <input
-              type="number"
-              value={numGroupsToCreate}
-              onChange={(e) => setNumGroupsToCreate(parseInt(e.target.value) || 1)}
-              min="1"
-              max="36"
-              className="w-24 px-4 py-2 border border-gray-300 rounded-lg"
-            />
-            <button
-              onClick={createGroups}
-              className="flex items-center gap-2 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              Create Groups
-            </button>
-          </div>
+          <h3 className="text-lg font-semibold mb-4">Create Your First Group</h3>
+          <button
+            onClick={addSingleGroup}
+            className="flex items-center gap-2 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Add A Group
+          </button>
         </div>
       ) : (
         <>
@@ -522,7 +542,50 @@ export default function GroupManagement() {
               <div key={group.id} className="bg-white rounded-lg shadow">
                 <div className="bg-green-600 text-white px-6 py-3 flex justify-between items-center">
                   <div className="flex items-center gap-4">
-                    <h3 className="text-lg font-semibold">Group {group.number}</h3>
+                    {editingGroupId === group.id ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">Group</span>
+                        <input
+                          type="number"
+                          value={editingGroupNumber}
+                          onChange={(e) => setEditingGroupNumber(parseInt(e.target.value) || 1)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              updateGroupNumber(group.id, editingGroupNumber);
+                            }
+                          }}
+                          min="1"
+                          className="w-16 px-2 py-1 text-gray-900 rounded text-center"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => updateGroupNumber(group.id, editingGroupNumber)}
+                          className="p-1 bg-green-700 hover:bg-green-800 rounded"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setEditingGroupId(null)}
+                          className="p-1 bg-red-600 hover:bg-red-700 rounded"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold">Group {group.number}</h3>
+                        <button
+                          onClick={() => {
+                            setEditingGroupId(group.id);
+                            setEditingGroupNumber(group.number);
+                          }}
+                          className="p-1 hover:bg-green-700 rounded"
+                          title="Edit group number"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                     
                     {startType === 'shotgun' ? (
                       <div className="flex items-center gap-2">
@@ -703,13 +766,11 @@ export default function GroupManagement() {
           <div className="mt-6 flex justify-between items-center">
             <div className="flex gap-2">
               <button
-                onClick={() => {
-                  createGroups();
-                }}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                onClick={addSingleGroup}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
               >
                 <Plus className="w-5 h-5" />
-                Add More Groups
+                Add A Group
               </button>
               
               {groups.length > 0 && (
