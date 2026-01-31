@@ -250,7 +250,7 @@ export default function TournamentSetup() {
     setLoading(true);
 
     try {
-      const tournamentData = {
+      const tournamentData: any = {
         name,
         course_name: courseName || null,
         tournament_date: tournamentDate || null,
@@ -279,6 +279,11 @@ export default function TournamentSetup() {
         visible_to_players: true
       };
 
+      // CRITICAL: Preserve slug when editing
+      if (isEditing && tournamentSlug) {
+        tournamentData.slug = tournamentSlug;
+      }
+
       if (isEditing) {
         const { error } = await supabase
           .from('tournaments')
@@ -287,6 +292,9 @@ export default function TournamentSetup() {
 
         if (error) throw error;
         alert('Tournament updated successfully!');
+        
+        // Reload to confirm slug is still there
+        await loadTournament();
       } else {
         const { data, error } = await supabase
           .from('tournaments')
