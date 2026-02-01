@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Calendar, Users, LogOut, UserCog, Eye, EyeOff, Share2 } from 'lucide-react';
+import { Plus, Calendar, Users, LogOut, UserCog, Eye, EyeOff, Share2, Lock, Unlock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Tournament, User, TournamentAccess } from '../types/database.types';
 import { useAuth } from '../context/AuthContext';
@@ -104,6 +104,56 @@ export default function TournamentList() {
     } catch (error) {
       console.error('Error toggling visibility:', error);
       alert('Failed to update visibility');
+    }
+  };
+
+  const finalizeTournament = async (tournamentId: string, tournamentName: string) => {
+    if (!confirm(`Finalize "${tournamentName}"?\n\nThis will:\n- Lock ALL scores across all groups\n- Prevent any further edits\n\nYou can unlock later if needed.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('tournaments')
+        .update({
+          finalized: true,
+          finalized_at: new Date().toISOString(),
+          finalized_by: user?.id
+        })
+        .eq('id', tournamentId);
+
+      if (error) throw error;
+
+      alert('✅ Tournament finalized! All scores are now locked.');
+      loadData();
+    } catch (error) {
+      console.error('Error finalizing tournament:', error);
+      alert('Failed to finalize tournament');
+    }
+  };
+
+  const unlockTournament = async (tournamentId: string, tournamentName: string) => {
+    if (!confirm(`Unlock "${tournamentName}"?\n\nThis will allow scores to be edited again.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('tournaments')
+        .update({
+          finalized: false,
+          finalized_at: null,
+          finalized_by: null
+        })
+        .eq('id', tournamentId);
+
+      if (error) throw error;
+
+      alert('🔓 Tournament unlocked! Scores can be edited again.');
+      loadData();
+    } catch (error) {
+      console.error('Error unlocking tournament:', error);
+      alert('Failed to unlock tournament');
     }
   };
 
@@ -265,7 +315,11 @@ export default function TournamentList() {
               return (
                 <div
                   key={tournament.id}
-                  className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border-2 border-transparent hover:border-green-500"
+                  className={`bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border-2 ${
+                    tournament.finalized 
+                      ? 'border-red-500' 
+                      : 'border-transparent hover:border-green-500'
+                  }`}
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
@@ -273,6 +327,15 @@ export default function TournamentList() {
                         <h3 className="text-xl font-bold text-gray-900">
                           {tournament.name}
                         </h3>
+                        
+                        {/* FINALIZED BADGE */}
+                        {tournament.finalized && (
+                          <span className="flex items-center gap-1 px-3 py-1 bg-red-100 text-red-800 rounded-lg text-sm font-bold">
+                            <Lock className="w-4 h-4" />
+                            FINALIZED
+                          </span>
+                        )}
+
                         <button
                           onClick={() => toggleVisibility(tournament.id, tournament.visible_to_players)}
                           className={`flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
@@ -310,6 +373,13 @@ export default function TournamentList() {
                           {tournament.flights.length} Flight{tournament.flights.length !== 1 ? 's' : ''}
                         </div>
                       </div>
+                      
+                      {/* Show finalized timestamp */}
+                      {tournament.finalized && tournament.finalized_at && (
+                        <p className="text-xs text-red-600 mt-2">
+                          🔒 Finalized: {new Date(tournament.finalized_at).toLocaleString()}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -369,6 +439,26 @@ export default function TournamentList() {
                         >
                           Edit
                         </Link>
+                        
+                        {/* FINALIZE / UNLOCK BUTTON */}
+                        {tournament.finalized ? (
+                          <button
+                            onClick={() => unlockTournament(tournament.id, tournament.name)}
+                            className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded font-medium text-sm transition-colors"
+                          >
+                            <Unlock className="w-4 h-4" />
+                            Unlock
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => finalizeTournament(tournament.id, tournament.name)}
+                            className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded font-medium text-sm transition-colors"
+                          >
+                            <Lock className="w-4 h-4" />
+                            Finalize
+                          </button>
+                        )}
+                        
                         <button
                           onClick={() => deleteTournament(tournament.id, tournament.name)}
                           className="flex-1 text-center px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded font-medium text-sm transition-colors"
