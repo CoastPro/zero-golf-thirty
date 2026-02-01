@@ -1,11 +1,25 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Calendar, Users, LogOut, UserCog, Eye, EyeOff, Share2, Lock, Unlock, FileSpreadsheet } from 'lucide-react';
+import { Plus, Calendar, Users, LogOut, UserCog, Eye, EyeOff, Share2, Lock, Unlock, FileSpreadsheet, FileText, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabase';
 import { Tournament, User, TournamentAccess, Player, Score, Group } from '../types/database.types';
 import { useAuth } from '../context/AuthContext';
 import { buildLeaderboard, buildSkinsLeaderboard } from '../lib/calculations';
+
+interface PDFOptions {
+  includeStandings: boolean;
+  includeHoleByHole: boolean;
+  includeSkins: boolean;
+  includeGroups: boolean;
+  includeCourseInfo: boolean;
+  includeLogo: boolean;
+  includeSponsorLogos: boolean;
+  showHandicaps: boolean;
+  showQuotas: boolean;
+}
 
 export default function TournamentList() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -13,6 +27,20 @@ export default function TournamentList() {
   const [tournamentAccess, setTournamentAccess] = useState<TournamentAccess[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<string | null>(null);
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  const [selectedTournamentForPdf, setSelectedTournamentForPdf] = useState<{ id: string; name: string } | null>(null);
+  const [pdfOptions, setPdfOptions] = useState<PDFOptions>({
+    includeStandings: true,
+    includeHoleByHole: true,
+    includeSkins: true,
+    includeGroups: false,
+    includeCourseInfo: true,
+    includeLogo: true,
+    includeSponsorLogos: true,
+    showHandicaps: true,
+    showQuotas: true
+  });
+
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
@@ -170,6 +198,348 @@ export default function TournamentList() {
     } catch (error) {
       console.error('Error unlocking tournament:', error);
       alert('Failed to unlock tournament');
+    }
+  };
+
+  const openPdfModal = (tournamentId: string, tournamentName: string) => {
+    setSelectedTournamentForPdf({ id: tournamentId, name: tournamentName });
+    setPdfModalOpen(true);
+  };
+
+  const closePdfModal = () => {
+    setPdfModalOpen(false);
+    setSelectedTournamentForPdf(null);
+  };
+
+  const exportToPdf = async () => {
+    if (!selectedTournamentForPdf) return;
+
+    setExporting(selectedTournamentForPdf.id);
+    closePdfModal();
+
+    try {
+      // Fetch all tournament data
+      const { data: tournament, error: tournamentError } = await supabase
+        .from('tournaments')
+        .select('*')
+        .eq('id', selectedTournamentForPdf.id)
+        .single();
+
+      if (tournamentError) throw tournamentError;
+
+      const { data: players, error: playersError } = await supabase
+        .from('players')
+        .select('*')
+        .eq('tournament_id', selectedTournamentForPdf.id)
+        .order('name');
+
+      if (playersError) throw playersError;
+
+      const { data: scores, error: scoresError } = await supabase
+        .from('scores')
+        .select('*')
+        .in('player_id', (players || []).map(p => p.id));
+
+      if (scoresError) throw scoresError;
+
+      const { data: groups, error: groupsError } = await supabase
+        .from('groups')
+        .select('*')
+        .eq('tournament_id', selectedTournamentForPdf.id)
+        .order('number');
+
+      if (groupsError) throw groupsError;
+
+      const { data: groupPlayers, error: gpError } = await supabase
+        .from('group_players')
+        .select('*')
+        .in('group_id', (groups || []).map(g => g.id));
+
+      if (gpError) throw gpError;
+
+      // Create PDF
+      const doc = new jsPDF();
+      let yPos = 20;
+
+      // Add logo if enabled
+      if (pdfOptions.includeLogo && tournament.tournament_logo_url) {
+        try {
+          doc.addImage(tournament.tournament_logo_url, 'PNG', 15, yPos, 40, 20);
+          yPos += 25;
+        } catch (e) {
+          console.error('Failed to add logo:', e);
+        }
+      }
+
+      // Title
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text(tournament.name, 105, yPos, { align: 'center' });
+      yPos += 10;
+
+      if (tournament.course_name) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.text(tournament.course_name, 105, yPos, { align: 'center' });
+        yPos += 8;
+      }
+
+      if (tournament.tournament_date) {
+        doc.setFontSize(10);
+        doc.text(new Date(tournament.tournament_date + 'T00:00:00').toLocaleDateString(), 105, yPos, { align: 'center' });
+        yPos += 15;
+      }
+
+      // Add sponsor logos if enabled
+      if (pdfOptions.includeSponsorLogos) {
+        if (tournament.leaderboard_logo_left) {
+          try {
+            doc.addImage(tournament.leaderboard_logo_left, 'PNG', 15, yPos, 30, 15);
+          } catch (e) {
+            console.error('Failed to add left sponsor logo:', e);
+          }
+        }
+        if (tournament.leaderboard_logo_right) {
+          try {
+            doc.addImage(tournament.leaderboard_logo_right, 'PNG', 165, yPos, 30, 15);
+          } catch (e) {
+            console.error('Failed to add right sponsor logo:', e);
+          }
+        }
+        yPos += 20;
+      }
+
+      // SECTION 1: FINAL STANDINGS
+      if (pdfOptions.includeStandings) {
+        const leaderboard = buildLeaderboard(players || [], scores || [], tournament, null);
+        
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Final Standings', 15, yPos);
+        yPos += 5;
+
+        const standingsHeaders = ['Rank', 'Player', 'Flight'];
+        if (pdfOptions.showHandicaps) standingsHeaders.push('HC');
+        if (pdfOptions.showQuotas) standingsHeaders.push('Quota');
+        standingsHeaders.push('Played', 'Gross', '±', 'Net', '±', 'Pts', 'vs Q');
+
+        const standingsRows = leaderboard.map((entry, index) => {
+          const row: any[] = [
+            entry.holesPlayed === 0 ? '-' : index + 1,
+            entry.player.name,
+            entry.player.flight
+          ];
+          if (pdfOptions.showHandicaps) row.push(entry.player.handicap);
+          if (pdfOptions.showQuotas) row.push(entry.player.quota);
+          row.push(
+            entry.holesPlayed,
+            entry.holesPlayed > 0 ? entry.grossScore : '-',
+            entry.holesPlayed > 0 ? (entry.vsParGross > 0 ? `+${entry.vsParGross}` : entry.vsParGross) : '-',
+            entry.netScore !== null ? entry.netScore : '-',
+            entry.vsParNet !== null ? (entry.vsParNet > 0 ? `+${entry.vsParNet}` : entry.vsParNet) : '-',
+            entry.holesPlayed > 0 ? entry.stablefordPoints : '-',
+            entry.holesPlayed > 0 ? (entry.vsQuota > 0 ? `+${entry.vsQuota.toFixed(1)}` : entry.vsQuota.toFixed(1)) : '-'
+          );
+          return row;
+        });
+
+        (autoTable as any)(doc, {
+          startY: yPos,
+          head: [standingsHeaders],
+          body: standingsRows,
+          theme: 'grid',
+          headStyles: { fillColor: [22, 101, 52], fontSize: 8 },
+          bodyStyles: { fontSize: 7 },
+          columnStyles: { 0: { cellWidth: 10 } }
+        });
+
+        yPos = (doc as any).lastAutoTable.finalY + 10;
+
+        // Add new page if needed
+        if (yPos > 250) {
+          doc.addPage();
+          yPos = 20;
+        }
+      }
+
+      // SECTION 2: HOLE BY HOLE
+      if (pdfOptions.includeHoleByHole) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Hole-by-Hole Scores', 15, yPos);
+        yPos += 5;
+
+        const holeHeaders = ['Player', 'Flt'];
+        if (pdfOptions.showHandicaps) holeHeaders.push('HC');
+        for (let i = 1; i <= 18; i++) holeHeaders.push(i.toString());
+        holeHeaders.push('Tot');
+
+        const holeRows = (players || []).map(player => {
+          const playerScores = (scores || []).filter(s => s.player_id === player.id);
+          const row: any[] = [player.name, player.flight];
+          if (pdfOptions.showHandicaps) row.push(player.handicap);
+          
+          for (let hole = 1; hole <= 18; hole++) {
+            const score = playerScores.find(s => s.hole === hole);
+            row.push(score?.score || '-');
+          }
+          
+          const totalScore = playerScores.reduce((sum, s) => sum + (s.score || 0), 0);
+          row.push(playerScores.length > 0 ? totalScore : '-');
+          
+          return row;
+        });
+
+        (autoTable as any)(doc, {
+          startY: yPos,
+          head: [holeHeaders],
+          body: holeRows,
+          theme: 'grid',
+          headStyles: { fillColor: [22, 101, 52], fontSize: 6 },
+          bodyStyles: { fontSize: 5 },
+          columnStyles: { 0: { cellWidth: 25 } }
+        });
+
+        yPos = (doc as any).lastAutoTable.finalY + 10;
+
+        if (yPos > 250) {
+          doc.addPage();
+          yPos = 20;
+        }
+      }
+
+      // SECTION 3: SKINS
+      if (pdfOptions.includeSkins && tournament.skins_enabled) {
+        const skinsData = buildSkinsLeaderboard(players || [], scores || [], tournament);
+
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Skins Results', 15, yPos);
+        yPos += 5;
+
+        // Skins summary
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Total Pot: $${skinsData.totalPot.toFixed(2)} | Skins Won: ${skinsData.skinsWon} | Value Per Skin: $${skinsData.valuePerSkin.toFixed(2)} | Type: ${tournament.skins_type.toUpperCase()}`, 15, yPos);
+        yPos += 7;
+
+        if (skinsData.leaderboard.length > 0) {
+          const skinsHeaders = ['Rank', 'Player', 'Flight', 'Skins', 'Holes', 'Winnings'];
+          const skinsRows = skinsData.leaderboard.map((entry, index) => [
+            index + 1,
+            entry.player.name,
+            entry.player.flight,
+            entry.skins,
+            entry.holes.sort((a, b) => a - b).join(', '),
+            `$${entry.winnings.toFixed(2)}`
+          ]);
+
+          (autoTable as any)(doc, {
+            startY: yPos,
+            head: [skinsHeaders],
+            body: skinsRows,
+            theme: 'grid',
+            headStyles: { fillColor: [22, 101, 52], fontSize: 9 },
+            bodyStyles: { fontSize: 8 }
+          });
+
+          yPos = (doc as any).lastAutoTable.finalY + 10;
+        }
+
+        if (yPos > 250) {
+          doc.addPage();
+          yPos = 20;
+        }
+      }
+
+      // SECTION 4: GROUPS
+      if (pdfOptions.includeGroups) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Groups & Tee Times', 15, yPos);
+        yPos += 5;
+
+        const groupsHeaders = ['Group', 'Start Hole', 'Tee Pos', 'Tee Time', 'Players', 'Status'];
+        const groupsRows = (groups || []).map(group => {
+          const groupPlayersList = (groupPlayers || [])
+            .filter(gp => gp.group_id === group.id)
+            .map(gp => {
+              const player = (players || []).find(p => p.id === gp.player_id);
+              return player ? player.name : '';
+            })
+            .join(', ');
+
+          return [
+            group.number,
+            group.starting_hole || '-',
+            group.starting_position || '-',
+            group.tee_time || '-',
+            groupPlayersList,
+            group.round_finished ? 'Finished' : 'In Progress'
+          ];
+        });
+
+        (autoTable as any)(doc, {
+          startY: yPos,
+          head: [groupsHeaders],
+          body: groupsRows,
+          theme: 'grid',
+          headStyles: { fillColor: [22, 101, 52], fontSize: 8 },
+          bodyStyles: { fontSize: 7 }
+        });
+
+        yPos = (doc as any).lastAutoTable.finalY + 10;
+
+        if (yPos > 250) {
+          doc.addPage();
+          yPos = 20;
+        }
+      }
+
+      // SECTION 5: COURSE INFO
+      if (pdfOptions.includeCourseInfo) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Course Information', 15, yPos);
+        yPos += 5;
+
+        const courseHeaders = ['Hole', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'OUT', '10', '11', '12', '13', '14', '15', '16', '17', '18', 'IN', 'TOT'];
+        const parRow = ['Par'];
+        
+        for (let i = 0; i < 9; i++) {
+          parRow.push(tournament.course_par[i].toString());
+        }
+        parRow.push(tournament.course_par.slice(0, 9).reduce((a: number, b: number) => a + b, 0).toString());
+        
+        for (let i = 9; i < 18; i++) {
+          parRow.push(tournament.course_par[i].toString());
+        }
+        parRow.push(tournament.course_par.slice(9, 18).reduce((a: number, b: number) => a + b, 0).toString());
+        parRow.push(tournament.course_par.reduce((a: number, b: number) => a + b, 0).toString());
+
+        (autoTable as any)(doc, {
+          startY: yPos,
+          head: [courseHeaders],
+          body: [parRow],
+          theme: 'grid',
+          headStyles: { fillColor: [22, 101, 52], fontSize: 7 },
+          bodyStyles: { fontSize: 7 }
+        });
+      }
+
+      // Generate filename with date
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `${selectedTournamentForPdf.name.replace(/[^a-z0-9]/gi, '_')}_Results_${date}.pdf`;
+
+      // Download file
+      doc.save(filename);
+
+      alert('✅ PDF downloaded successfully!');
+    } catch (error) {
+      console.error('Error exporting to PDF:', error);
+      alert('Failed to export to PDF');
+    } finally {
+      setExporting(null);
     }
   };
 
@@ -462,6 +832,137 @@ export default function TournamentList() {
         </div>
       </div>
 
+      {/* PDF Options Modal */}
+      {pdfModalOpen && selectedTournamentForPdf && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">PDF Export Options</h3>
+              <button onClick={closePdfModal} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-4">
+              Choose what to include in the PDF for <strong>{selectedTournamentForPdf.name}</strong>
+            </p>
+
+            <div className="space-y-3 mb-6">
+              <h4 className="font-semibold text-sm text-gray-700">Content</h4>
+              
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={pdfOptions.includeStandings}
+                  onChange={(e) => setPdfOptions({ ...pdfOptions, includeStandings: e.target.checked })}
+                  className="w-4 h-4 text-green-600 rounded"
+                />
+                <span className="text-sm">Final Standings</span>
+              </label>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={pdfOptions.includeHoleByHole}
+                  onChange={(e) => setPdfOptions({ ...pdfOptions, includeHoleByHole: e.target.checked })}
+                  className="w-4 h-4 text-green-600 rounded"
+                />
+                <span className="text-sm">Hole-by-Hole Scores</span>
+              </label>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={pdfOptions.includeSkins}
+                  onChange={(e) => setPdfOptions({ ...pdfOptions, includeSkins: e.target.checked })}
+                  className="w-4 h-4 text-green-600 rounded"
+                />
+                <span className="text-sm">Skins Results</span>
+              </label>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={pdfOptions.includeGroups}
+                  onChange={(e) => setPdfOptions({ ...pdfOptions, includeGroups: e.target.checked })}
+                  className="w-4 h-4 text-green-600 rounded"
+                />
+                <span className="text-sm">Groups & Tee Times</span>
+              </label>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={pdfOptions.includeCourseInfo}
+                  onChange={(e) => setPdfOptions({ ...pdfOptions, includeCourseInfo: e.target.checked })}
+                  className="w-4 h-4 text-green-600 rounded"
+                />
+                <span className="text-sm">Course Information</span>
+              </label>
+
+              <hr className="my-3" />
+
+              <h4 className="font-semibold text-sm text-gray-700">Styling</h4>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={pdfOptions.includeLogo}
+                  onChange={(e) => setPdfOptions({ ...pdfOptions, includeLogo: e.target.checked })}
+                  className="w-4 h-4 text-green-600 rounded"
+                />
+                <span className="text-sm">Include Tournament Logo</span>
+              </label>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={pdfOptions.includeSponsorLogos}
+                  onChange={(e) => setPdfOptions({ ...pdfOptions, includeSponsorLogos: e.target.checked })}
+                  className="w-4 h-4 text-green-600 rounded"
+                />
+                <span className="text-sm">Include Sponsor Logos</span>
+              </label>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={pdfOptions.showHandicaps}
+                  onChange={(e) => setPdfOptions({ ...pdfOptions, showHandicaps: e.target.checked })}
+                  className="w-4 h-4 text-green-600 rounded"
+                />
+                <span className="text-sm">Show Handicaps</span>
+              </label>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={pdfOptions.showQuotas}
+                  onChange={(e) => setPdfOptions({ ...pdfOptions, showQuotas: e.target.checked })}
+                  className="w-4 h-4 text-green-600 rounded"
+                />
+                <span className="text-sm">Show Quotas</span>
+              </label>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={closePdfModal}
+                className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={exportToPdf}
+                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Generate PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
@@ -635,7 +1136,17 @@ export default function TournamentList() {
                           className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded font-medium text-sm transition-colors disabled:opacity-50"
                         >
                           <FileSpreadsheet className="w-4 h-4" />
-                          {exporting === tournament.id ? 'Exporting...' : 'Excel'}
+                          {exporting === tournament.id ? '...' : 'Excel'}
+                        </button>
+
+                        {/* EXPORT TO PDF BUTTON */}
+                        <button
+                          onClick={() => openPdfModal(tournament.id, tournament.name)}
+                          disabled={exporting === tournament.id}
+                          className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded font-medium text-sm transition-colors disabled:opacity-50"
+                        >
+                          <FileText className="w-4 h-4" />
+                          PDF
                         </button>
                         
                         {/* FINALIZE / UNLOCK BUTTON */}
