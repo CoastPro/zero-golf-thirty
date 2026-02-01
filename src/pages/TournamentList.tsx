@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Calendar, Users, LogOut, UserCog, Eye, EyeOff, Share2, Lock, Unlock } from 'lucide-react';
+import { Plus, Calendar, Users, LogOut, UserCog, Eye, EyeOff, Share2, Lock, Unlock, FileSpreadsheet } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { supabase } from '../lib/supabase';
-import { Tournament, User, TournamentAccess } from '../types/database.types';
+import { Tournament, User, TournamentAccess, Player, Score, Group } from '../types/database.types';
 import { useAuth } from '../context/AuthContext';
+import { buildLeaderboard, buildSkinsLeaderboard } from '../lib/calculations';
 
 export default function TournamentList() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [tournamentAccess, setTournamentAccess] = useState<TournamentAccess[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState<string | null>(null);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
@@ -132,43 +135,215 @@ export default function TournamentList() {
     }
   };
 
-const unlockTournament = async (tournamentId: string, tournamentName: string) => {
-  if (!confirm(`Unlock "${tournamentName}"?\n\nThis will:\n- Unlock the tournament\n- Unlock ALL groups\n- Allow scores to be edited again`)) {
-    return;
-  }
+  const unlockTournament = async (tournamentId: string, tournamentName: string) => {
+    if (!confirm(`Unlock "${tournamentName}"?\n\nThis will:\n- Unlock the tournament\n- Unlock ALL groups\n- Allow scores to be edited again`)) {
+      return;
+    }
 
-  try {
-    // Unlock the tournament
-    const { error: tournamentError } = await supabase
-      .from('tournaments')
-      .update({
-        finalized: false,
-        finalized_at: null,
-        finalized_by: null
-      })
-      .eq('id', tournamentId);
+    try {
+      // Unlock the tournament
+      const { error: tournamentError } = await supabase
+        .from('tournaments')
+        .update({
+          finalized: false,
+          finalized_at: null,
+          finalized_by: null
+        })
+        .eq('id', tournamentId);
 
-    if (tournamentError) throw tournamentError;
+      if (tournamentError) throw tournamentError;
 
-    // Unlock all groups in this tournament
-    const { error: groupsError } = await supabase
-      .from('groups')
-      .update({
-        round_finished: false,
-        finished_at: null,
-        locked_by_admin: false
-      })
-      .eq('tournament_id', tournamentId);
+      // Unlock all groups in this tournament
+      const { error: groupsError } = await supabase
+        .from('groups')
+        .update({
+          round_finished: false,
+          finished_at: null,
+          locked_by_admin: false
+        })
+        .eq('tournament_id', tournamentId);
 
-    if (groupsError) throw groupsError;
+      if (groupsError) throw groupsError;
 
-    alert('🔓 Tournament unlocked! All groups can edit scores again.');
-    loadData();
-  } catch (error) {
-    console.error('Error unlocking tournament:', error);
-    alert('Failed to unlock tournament');
-  }
-};
+      alert('🔓 Tournament unlocked! All groups can edit scores again.');
+      loadData();
+    } catch (error) {
+      console.error('Error unlocking tournament:', error);
+      alert('Failed to unlock tournament');
+    }
+  };
+
+  const exportToExcel = async (tournamentId: string, tournamentName: string) => {
+    setExporting(tournamentId);
+    try {
+      // Fetch all tournament data
+      const { data: tournament, error: tournamentError } = await supabase
+        .from('tournaments')
+        .select('*')
+        .eq('id', tournamentId)
+        .single();
+
+      if (tournamentError) throw tournamentError;
+
+      const { data: players, error: playersError } = await supabase
+        .from('players')
+        .select('*')
+        .eq('tournament_id', tournamentId)
+        .order('name');
+
+      if (playersError) throw playersError;
+
+      const { data: scores, error: scoresError } = await supabase
+        .from('scores')
+        .select('*')
+        .in('player_id', (players || []).map(p => p.id));
+
+      if (scoresError) throw scoresError;
+
+      const { data: groups, error: groupsError } = await supabase
+        .from('groups')
+        .select('*')
+        .eq('tournament_id', tournamentId)
+        .order('number');
+
+      if (groupsError) throw groupsError;
+
+      const { data: groupPlayers, error: gpError } = await supabase
+        .from('group_players')
+        .select('*')
+        .in('group_id', (groups || []).map(g => g.id));
+
+      if (gpError) throw gpError;
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+
+      // SHEET 1: FINAL STANDINGS
+      const leaderboard = buildLeaderboard(players || [], scores || [], tournament, null);
+      const standingsData = leaderboard.map((entry, index) => ({
+        'Rank': entry.holesPlayed === 0 ? '-' : index + 1,
+        'Player': entry.player.name,
+        'Flight': entry.player.flight,
+        'Handicap': entry.player.handicap,
+        'Quota': entry.player.quota,
+        'Holes Played': entry.holesPlayed,
+        'Gross Score': entry.holesPlayed > 0 ? entry.grossScore : '-',
+        'vs Par (Gross)': entry.holesPlayed > 0 ? (entry.vsParGross > 0 ? `+${entry.vsParGross}` : entry.vsParGross) : '-',
+        'Net Score': entry.netScore !== null ? entry.netScore : '-',
+        'vs Par (Net)': entry.vsParNet !== null ? (entry.vsParNet > 0 ? `+${entry.vsParNet}` : entry.vsParNet) : '-',
+        'Stableford Points': entry.holesPlayed > 0 ? entry.stablefordPoints : '-',
+        'vs Quota': entry.holesPlayed > 0 ? (entry.vsQuota > 0 ? `+${entry.vsQuota.toFixed(1)}` : entry.vsQuota.toFixed(1)) : '-'
+      }));
+
+      const standingsSheet = XLSX.utils.json_to_sheet(standingsData);
+      XLSX.utils.book_append_sheet(wb, standingsSheet, 'Final Standings');
+
+      // SHEET 2: HOLE BY HOLE SCORES
+      const holeByHoleData: any[] = [];
+      (players || []).forEach(player => {
+        const playerScores = (scores || []).filter(s => s.player_id === player.id);
+        const row: any = {
+          'Player': player.name,
+          'Flight': player.flight,
+          'Handicap': player.handicap
+        };
+        
+        for (let hole = 1; hole <= 18; hole++) {
+          const score = playerScores.find(s => s.hole === hole);
+          row[`Hole ${hole}`] = score?.score || '-';
+        }
+        
+        const totalScore = playerScores.reduce((sum, s) => sum + (s.score || 0), 0);
+        row['Total'] = playerScores.length > 0 ? totalScore : '-';
+        
+        holeByHoleData.push(row);
+      });
+
+      const holeByHoleSheet = XLSX.utils.json_to_sheet(holeByHoleData);
+      XLSX.utils.book_append_sheet(wb, holeByHoleSheet, 'Hole by Hole');
+
+      // SHEET 3: SKINS (if enabled)
+      if (tournament.skins_enabled) {
+        const skinsData = buildSkinsLeaderboard(players || [], scores || [], tournament);
+        
+        const skinsLeaderboardData = skinsData.leaderboard.map((entry, index) => ({
+          'Rank': index + 1,
+          'Player': entry.player.name,
+          'Flight': entry.player.flight,
+          'Skins Won': entry.skins,
+          'Holes': entry.holes.sort((a, b) => a - b).join(', '),
+          'Winnings': `$${entry.winnings.toFixed(2)}`
+        }));
+
+        const skinsSheet = XLSX.utils.json_to_sheet(skinsLeaderboardData);
+        XLSX.utils.book_append_sheet(wb, skinsSheet, 'Skins');
+
+        // Add skins summary
+        const skinsSummary = [
+          { 'Summary': 'Total Pot', 'Value': `$${skinsData.totalPot.toFixed(2)}` },
+          { 'Summary': 'Skins Won', 'Value': skinsData.skinsWon },
+          { 'Summary': 'Value Per Skin', 'Value': `$${skinsData.valuePerSkin.toFixed(2)}` },
+          { 'Summary': 'Type', 'Value': tournament.skins_type.toUpperCase() }
+        ];
+        
+        XLSX.utils.sheet_add_json(skinsSheet, skinsSummary, { origin: -1, skipHeader: false });
+      }
+
+      // SHEET 4: GROUPS
+      const groupsData = (groups || []).map(group => {
+        const groupPlayersList = (groupPlayers || [])
+          .filter(gp => gp.group_id === group.id)
+          .map(gp => {
+            const player = (players || []).find(p => p.id === gp.player_id);
+            return player ? `${player.name} (Cart ${gp.cart_number || '-'})` : '';
+          })
+          .join(', ');
+
+        return {
+          'Group': group.number,
+          'Starting Hole': group.starting_hole || '-',
+          'Tee Position': group.starting_position || '-',
+          'Tee Time': group.tee_time || '-',
+          'Players': groupPlayersList,
+          'Status': group.round_finished ? 'Finished' : 'In Progress'
+        };
+      });
+
+      const groupsSheet = XLSX.utils.json_to_sheet(groupsData);
+      XLSX.utils.book_append_sheet(wb, groupsSheet, 'Groups');
+
+      // SHEET 5: COURSE INFO
+      const courseData = tournament.course_par.map((par, index) => ({
+        'Hole': index + 1,
+        'Par': par
+      }));
+
+      // Add totals
+      const frontNine = tournament.course_par.slice(0, 9).reduce((a, b) => a + b, 0);
+      const backNine = tournament.course_par.slice(9, 18).reduce((a, b) => a + b, 0);
+      
+      courseData.push({ 'Hole': 'OUT', 'Par': frontNine });
+      courseData.push({ 'Hole': 'IN', 'Par': backNine });
+      courseData.push({ 'Hole': 'TOTAL', 'Par': frontNine + backNine });
+
+      const courseSheet = XLSX.utils.json_to_sheet(courseData);
+      XLSX.utils.book_append_sheet(wb, courseSheet, 'Course Info');
+
+      // Generate filename with date
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `${tournamentName.replace(/[^a-z0-9]/gi, '_')}_Results_${date}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(wb, filename);
+
+      alert('✅ Excel file downloaded successfully!');
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      alert('Failed to export to Excel');
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const toggleUserAccess = async (tournamentId: string, userId: string) => {
     try {
@@ -452,6 +627,16 @@ const unlockTournament = async (tournamentId: string, tournamentName: string) =>
                         >
                           Edit
                         </Link>
+                        
+                        {/* EXPORT TO EXCEL BUTTON */}
+                        <button
+                          onClick={() => exportToExcel(tournament.id, tournament.name)}
+                          disabled={exporting === tournament.id}
+                          className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded font-medium text-sm transition-colors disabled:opacity-50"
+                        >
+                          <FileSpreadsheet className="w-4 h-4" />
+                          {exporting === tournament.id ? 'Exporting...' : 'Excel'}
+                        </button>
                         
                         {/* FINALIZE / UNLOCK BUTTON */}
                         {tournament.finalized ? (
