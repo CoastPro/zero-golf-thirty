@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Calendar, Users, LogOut, UserCog, Eye, EyeOff, Share2, Lock, Unlock, FileSpreadsheet, FileText, X } from 'lucide-react';
+import { Plus, Calendar, Users, LogOut, UserCog, Eye, EyeOff, Share2, Lock, Unlock, FileSpreadsheet, FileText, X, ChevronUp, ChevronDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -9,8 +9,13 @@ import { Tournament, User, TournamentAccess, Player, Score, Group } from '../typ
 import { useAuth } from '../context/AuthContext';
 import { buildLeaderboard, buildSkinsLeaderboard } from '../lib/calculations';
 
+type ScoringType = 'gross' | 'net' | 'stableford';
+
 interface PDFOptions {
-  includeStandings: boolean;
+  scoringTypes: ScoringType[];
+  scoringOrder: ScoringType[];
+  includeOverall: boolean;
+  includeByFlight: boolean;
   includeHoleByHole: boolean;
   includeSkins: boolean;
   includeGroups: boolean;
@@ -30,7 +35,10 @@ export default function TournamentList() {
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const [selectedTournamentForPdf, setSelectedTournamentForPdf] = useState<{ id: string; name: string } | null>(null);
   const [pdfOptions, setPdfOptions] = useState<PDFOptions>({
-    includeStandings: true,
+    scoringTypes: ['gross', 'stableford'],
+    scoringOrder: ['gross', 'stableford'],
+    includeOverall: true,
+    includeByFlight: true,
     includeHoleByHole: true,
     includeSkins: true,
     includeGroups: false,
@@ -54,7 +62,6 @@ export default function TournamentList() {
 
   const loadData = async () => {
     try {
-      // Load all users (for sharing dropdown)
       const { data: usersData, error: usersError } = await supabase
         .from('users')
         .select('*')
@@ -63,7 +70,6 @@ export default function TournamentList() {
       if (usersError) throw usersError;
       setAllUsers(usersData || []);
 
-      // Load tournament access permissions
       const { data: accessData, error: accessError } = await supabase
         .from('tournament_access')
         .select('*');
@@ -71,14 +77,12 @@ export default function TournamentList() {
       if (accessError) throw accessError;
       setTournamentAccess(accessData || []);
 
-      // Load tournaments based on user role
       let query = supabase
         .from('tournaments')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (user?.role === 'sub_admin') {
-        // Sub-admin sees: tournaments they created + tournaments shared with them
         const { data: sharedTournamentIds } = await supabase
           .from('tournament_access')
           .select('tournament_id')
@@ -86,16 +90,13 @@ export default function TournamentList() {
 
         const sharedIds = sharedTournamentIds?.map(t => t.tournament_id) || [];
 
-        // Build query differently based on whether there are shared tournaments
         let subAdminQuery = supabase
           .from('tournaments')
           .select('*');
 
         if (sharedIds.length > 0) {
-          // Has shared tournaments: created_by OR in shared list
           subAdminQuery = subAdminQuery.or(`created_by.eq.${user.id},id.in.(${sharedIds.join(',')})`);
         } else {
-          // No shared tournaments: only created_by
           subAdminQuery = subAdminQuery.eq('created_by', user.id);
         }
 
@@ -105,7 +106,6 @@ export default function TournamentList() {
         if (tournamentsError) throw tournamentsError;
         setTournaments(tournamentsData || []);
       } else {
-        // Master admin sees all tournaments
         const { data, error } = await query;
         if (error) throw error;
         setTournaments(data || []);
@@ -169,7 +169,6 @@ export default function TournamentList() {
     }
 
     try {
-      // Unlock the tournament
       const { error: tournamentError } = await supabase
         .from('tournaments')
         .update({
@@ -181,7 +180,6 @@ export default function TournamentList() {
 
       if (tournamentError) throw tournamentError;
 
-      // Unlock all groups in this tournament
       const { error: groupsError } = await supabase
         .from('groups')
         .update({
@@ -209,6 +207,50 @@ export default function TournamentList() {
   const closePdfModal = () => {
     setPdfModalOpen(false);
     setSelectedTournamentForPdf(null);
+  };
+
+  const toggleScoringType = (type: ScoringType) => {
+    if (pdfOptions.scoringTypes.includes(type)) {
+      // Remove it
+      setPdfOptions({
+        ...pdfOptions,
+        scoringTypes: pdfOptions.scoringTypes.filter(t => t !== type),
+        scoringOrder: pdfOptions.scoringOrder.filter(t => t !== type)
+      });
+    } else {
+      // Add it
+      setPdfOptions({
+        ...pdfOptions,
+        scoringTypes: [...pdfOptions.scoringTypes, type],
+        scoringOrder: [...pdfOptions.scoringOrder, type]
+      });
+    }
+  };
+
+  const moveScoringTypeUp = (type: ScoringType) => {
+    const index = pdfOptions.scoringOrder.indexOf(type);
+    if (index > 0) {
+      const newOrder = [...pdfOptions.scoringOrder];
+      [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
+      setPdfOptions({ ...pdfOptions, scoringOrder: newOrder });
+    }
+  };
+
+  const moveScoringTypeDown = (type: ScoringType) => {
+    const index = pdfOptions.scoringOrder.indexOf(type);
+    if (index < pdfOptions.scoringOrder.length - 1) {
+      const newOrder = [...pdfOptions.scoringOrder];
+      [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+      setPdfOptions({ ...pdfOptions, scoringOrder: newOrder });
+    }
+  };
+
+  const getScoringTypeLabel = (type: ScoringType): string => {
+    switch (type) {
+      case 'gross': return 'Gross Standings';
+      case 'net': return 'Net Standings';
+      case 'stableford': return 'Stableford Standings';
+    }
   };
 
   const exportToPdf = async () => {
@@ -309,44 +351,98 @@ export default function TournamentList() {
         yPos += 20;
       }
 
-      // SECTION 1: FINAL STANDINGS
-      if (pdfOptions.includeStandings) {
-        const leaderboard = buildLeaderboard(players || [], scores || [], tournament, null);
+      // Helper function to add standings table
+      const addStandingsTable = (type: ScoringType, flight: string | null) => {
+        const leaderboard = buildLeaderboard(players || [], scores || [], tournament, flight);
         
+        // Sort based on type
+        let sortedLeaderboard = [...leaderboard];
+        if (type === 'gross') {
+          sortedLeaderboard.sort((a, b) => a.grossScore - b.grossScore);
+        } else if (type === 'net') {
+          sortedLeaderboard.sort((a, b) => {
+            if (a.netScore === null) return 1;
+            if (b.netScore === null) return -1;
+            return a.netScore - b.netScore;
+          });
+        } else if (type === 'stableford') {
+          sortedLeaderboard.sort((a, b) => {
+            if (b.vsQuota !== a.vsQuota) {
+              return b.vsQuota - a.vsQuota;
+            }
+            return b.stablefordPoints - a.stablefordPoints;
+          });
+        }
+
+        // Build title
+        let title = '';
+        if (type === 'gross') title = 'Gross Standings';
+        if (type === 'net') title = 'Net Standings';
+        if (type === 'stableford') title = 'Stableford Standings';
+        if (flight) title += ` - Flight ${flight}`;
+
+        // Check if new page needed
+        if (yPos > 250) {
+          doc.addPage();
+          yPos = 20;
+        }
+
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.text('Final Standings', 15, yPos);
+        doc.text(title, 15, yPos);
         yPos += 5;
 
-        const standingsHeaders = ['Rank', 'Player', 'Flight'];
-        if (pdfOptions.showHandicaps) standingsHeaders.push('HC');
-        if (pdfOptions.showQuotas) standingsHeaders.push('Quota');
-        standingsHeaders.push('Played', 'Gross', '±', 'Net', '±', 'Pts', 'vs Q');
+        // Build headers based on type
+        const headers = ['Rank', 'Player'];
+        if (!flight) headers.push('Flight');
+        if (pdfOptions.showHandicaps) headers.push('HC');
+        if (pdfOptions.showQuotas && type === 'stableford') headers.push('Quota');
+        
+        if (type === 'gross') {
+          headers.push('Played', 'Score', '±');
+        } else if (type === 'net') {
+          headers.push('Played', 'Net', '±');
+        } else if (type === 'stableford') {
+          headers.push('Played', 'Points', 'vs Q');
+        }
 
-        const standingsRows = leaderboard.map((entry, index) => {
+        // Build rows
+        const rows = sortedLeaderboard.map((entry, index) => {
           const row: any[] = [
             entry.holesPlayed === 0 ? '-' : index + 1,
-            entry.player.name,
-            entry.player.flight
+            entry.player.name
           ];
+          if (!flight) row.push(entry.player.flight);
           if (pdfOptions.showHandicaps) row.push(entry.player.handicap);
-          if (pdfOptions.showQuotas) row.push(entry.player.quota);
-          row.push(
-            entry.holesPlayed,
-            entry.holesPlayed > 0 ? entry.grossScore : '-',
-            entry.holesPlayed > 0 ? (entry.vsParGross > 0 ? `+${entry.vsParGross}` : entry.vsParGross) : '-',
-            entry.netScore !== null ? entry.netScore : '-',
-            entry.vsParNet !== null ? (entry.vsParNet > 0 ? `+${entry.vsParNet}` : entry.vsParNet) : '-',
-            entry.holesPlayed > 0 ? entry.stablefordPoints : '-',
-            entry.holesPlayed > 0 ? (entry.vsQuota > 0 ? `+${entry.vsQuota.toFixed(1)}` : entry.vsQuota.toFixed(1)) : '-'
-          );
+          if (pdfOptions.showQuotas && type === 'stableford') row.push(entry.player.quota);
+
+          if (type === 'gross') {
+            row.push(
+              entry.holesPlayed,
+              entry.holesPlayed > 0 ? entry.grossScore : '-',
+              entry.holesPlayed > 0 ? (entry.vsParGross > 0 ? `+${entry.vsParGross}` : entry.vsParGross) : '-'
+            );
+          } else if (type === 'net') {
+            row.push(
+              entry.holesPlayed,
+              entry.netScore !== null ? entry.netScore : '-',
+              entry.vsParNet !== null ? (entry.vsParNet > 0 ? `+${entry.vsParNet}` : entry.vsParNet) : '-'
+            );
+          } else if (type === 'stableford') {
+            row.push(
+              entry.holesPlayed,
+              entry.holesPlayed > 0 ? entry.stablefordPoints : '-',
+              entry.holesPlayed > 0 ? (entry.vsQuota > 0 ? `+${entry.vsQuota.toFixed(1)}` : entry.vsQuota.toFixed(1)) : '-'
+            );
+          }
+
           return row;
         });
 
         (autoTable as any)(doc, {
           startY: yPos,
-          head: [standingsHeaders],
-          body: standingsRows,
+          head: [headers],
+          body: rows,
           theme: 'grid',
           headStyles: { fillColor: [22, 101, 52], fontSize: 8 },
           bodyStyles: { fontSize: 7 },
@@ -354,16 +450,30 @@ export default function TournamentList() {
         });
 
         yPos = (doc as any).lastAutoTable.finalY + 10;
+      };
 
-        // Add new page if needed
+      // Generate standings tables in order
+      for (const type of pdfOptions.scoringOrder) {
+        if (pdfOptions.scoringTypes.includes(type)) {
+          if (pdfOptions.includeOverall) {
+            addStandingsTable(type, null);
+          }
+          
+          if (pdfOptions.includeByFlight) {
+            for (const flight of tournament.flights) {
+              addStandingsTable(type, flight);
+            }
+          }
+        }
+      }
+
+      // HOLE BY HOLE
+      if (pdfOptions.includeHoleByHole) {
         if (yPos > 250) {
           doc.addPage();
           yPos = 20;
         }
-      }
 
-      // SECTION 2: HOLE BY HOLE
-      if (pdfOptions.includeHoleByHole) {
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.text('Hole-by-Hole Scores', 15, yPos);
@@ -401,23 +511,22 @@ export default function TournamentList() {
         });
 
         yPos = (doc as any).lastAutoTable.finalY + 10;
+      }
+
+      // SKINS
+      if (pdfOptions.includeSkins && tournament.skins_enabled) {
+        const skinsData = buildSkinsLeaderboard(players || [], scores || [], tournament);
 
         if (yPos > 250) {
           doc.addPage();
           yPos = 20;
         }
-      }
-
-      // SECTION 3: SKINS
-      if (pdfOptions.includeSkins && tournament.skins_enabled) {
-        const skinsData = buildSkinsLeaderboard(players || [], scores || [], tournament);
 
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.text('Skins Results', 15, yPos);
         yPos += 5;
 
-        // Skins summary
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.text(`Total Pot: $${skinsData.totalPot.toFixed(2)} | Skins Won: ${skinsData.skinsWon} | Value Per Skin: $${skinsData.valuePerSkin.toFixed(2)} | Type: ${tournament.skins_type.toUpperCase()}`, 15, yPos);
@@ -445,15 +554,15 @@ export default function TournamentList() {
 
           yPos = (doc as any).lastAutoTable.finalY + 10;
         }
+      }
 
+      // GROUPS
+      if (pdfOptions.includeGroups) {
         if (yPos > 250) {
           doc.addPage();
           yPos = 20;
         }
-      }
 
-      // SECTION 4: GROUPS
-      if (pdfOptions.includeGroups) {
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.text('Groups & Tee Times', 15, yPos);
@@ -489,15 +598,15 @@ export default function TournamentList() {
         });
 
         yPos = (doc as any).lastAutoTable.finalY + 10;
+      }
 
+      // COURSE INFO
+      if (pdfOptions.includeCourseInfo) {
         if (yPos > 250) {
           doc.addPage();
           yPos = 20;
         }
-      }
 
-      // SECTION 5: COURSE INFO
-      if (pdfOptions.includeCourseInfo) {
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.text('Course Information', 15, yPos);
@@ -546,7 +655,6 @@ export default function TournamentList() {
   const exportToExcel = async (tournamentId: string, tournamentName: string) => {
     setExporting(tournamentId);
     try {
-      // Fetch all tournament data
       const { data: tournament, error: tournamentError } = await supabase
         .from('tournaments')
         .select('*')
@@ -585,10 +693,8 @@ export default function TournamentList() {
 
       if (gpError) throw gpError;
 
-      // Create workbook
       const wb = XLSX.utils.book_new();
 
-      // SHEET 1: FINAL STANDINGS
       const leaderboard = buildLeaderboard(players || [], scores || [], tournament, null);
       const standingsData = leaderboard.map((entry, index) => ({
         'Rank': entry.holesPlayed === 0 ? '-' : index + 1,
@@ -608,7 +714,6 @@ export default function TournamentList() {
       const standingsSheet = XLSX.utils.json_to_sheet(standingsData);
       XLSX.utils.book_append_sheet(wb, standingsSheet, 'Final Standings');
 
-      // SHEET 2: HOLE BY HOLE SCORES
       const holeByHoleData: any[] = [];
       (players || []).forEach(player => {
         const playerScores = (scores || []).filter(s => s.player_id === player.id);
@@ -632,7 +737,6 @@ export default function TournamentList() {
       const holeByHoleSheet = XLSX.utils.json_to_sheet(holeByHoleData);
       XLSX.utils.book_append_sheet(wb, holeByHoleSheet, 'Hole by Hole');
 
-      // SHEET 3: SKINS (if enabled)
       if (tournament.skins_enabled) {
         const skinsData = buildSkinsLeaderboard(players || [], scores || [], tournament);
         
@@ -648,7 +752,6 @@ export default function TournamentList() {
         const skinsSheet = XLSX.utils.json_to_sheet(skinsLeaderboardData);
         XLSX.utils.book_append_sheet(wb, skinsSheet, 'Skins');
 
-        // Add skins summary
         const skinsSummary = [
           { 'Summary': 'Total Pot', 'Value': `$${skinsData.totalPot.toFixed(2)}` },
           { 'Summary': 'Skins Won', 'Value': skinsData.skinsWon },
@@ -659,7 +762,6 @@ export default function TournamentList() {
         XLSX.utils.sheet_add_json(skinsSheet, skinsSummary, { origin: -1, skipHeader: false });
       }
 
-      // SHEET 4: GROUPS
       const groupsData = (groups || []).map(group => {
         const groupPlayersList = (groupPlayers || [])
           .filter(gp => gp.group_id === group.id)
@@ -682,13 +784,11 @@ export default function TournamentList() {
       const groupsSheet = XLSX.utils.json_to_sheet(groupsData);
       XLSX.utils.book_append_sheet(wb, groupsSheet, 'Groups');
 
-      // SHEET 5: COURSE INFO
       const courseData = tournament.course_par.map((par: number, index: number) => ({
         'Hole': index + 1,
         'Par': par
       }));
 
-      // Add totals
       const frontNine = tournament.course_par.slice(0, 9).reduce((a: number, b: number) => a + b, 0);
       const backNine = tournament.course_par.slice(9, 18).reduce((a: number, b: number) => a + b, 0);
 
@@ -699,11 +799,9 @@ export default function TournamentList() {
       const courseSheet = XLSX.utils.json_to_sheet(courseData);
       XLSX.utils.book_append_sheet(wb, courseSheet, 'Course Info');
 
-      // Generate filename with date
       const date = new Date().toISOString().split('T')[0];
       const filename = `${tournamentName.replace(/[^a-z0-9]/gi, '_')}_Results_${date}.xlsx`;
 
-      // Download file
       XLSX.writeFile(wb, filename);
 
       alert('✅ Excel file downloaded successfully!');
@@ -717,13 +815,11 @@ export default function TournamentList() {
 
   const toggleUserAccess = async (tournamentId: string, userId: string) => {
     try {
-      // Check if access already exists
       const hasAccess = tournamentAccess.some(
         a => a.tournament_id === tournamentId && a.user_id === userId
       );
 
       if (hasAccess) {
-        // Remove access
         const { error } = await supabase
           .from('tournament_access')
           .delete()
@@ -732,7 +828,6 @@ export default function TournamentList() {
 
         if (error) throw error;
       } else {
-        // Grant access
         const { error } = await supabase
           .from('tournament_access')
           .insert({
@@ -789,7 +884,6 @@ export default function TournamentList() {
 
   const formatDate = (dateString: string | null): string => {
     if (!dateString) return 'No date';
-    // Add T00:00:00 to force local timezone interpretation
     const date = new Date(dateString + 'T00:00:00');
     return date.toLocaleDateString();
   };
@@ -835,7 +929,7 @@ export default function TournamentList() {
       {/* PDF Options Modal */}
       {pdfModalOpen && selectedTournamentForPdf && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-gray-900">PDF Export Options</h3>
               <button onClick={closePdfModal} className="text-gray-400 hover:text-gray-600">
@@ -844,105 +938,174 @@ export default function TournamentList() {
             </div>
 
             <p className="text-sm text-gray-600 mb-4">
-              Choose what to include in the PDF for <strong>{selectedTournamentForPdf.name}</strong>
+              Customize PDF export for <strong>{selectedTournamentForPdf.name}</strong>
             </p>
 
-            <div className="space-y-3 mb-6">
-              <h4 className="font-semibold text-sm text-gray-700">Content</h4>
-              
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={pdfOptions.includeStandings}
-                  onChange={(e) => setPdfOptions({ ...pdfOptions, includeStandings: e.target.checked })}
-                  className="w-4 h-4 text-green-600 rounded"
-                />
-                <span className="text-sm">Final Standings</span>
-              </label>
+            <div className="space-y-4 mb-6">
+              {/* Scoring Types Section */}
+              <div>
+                <h4 className="font-semibold text-sm text-gray-700 mb-2">Scoring Types & Order</h4>
+                <p className="text-xs text-gray-500 mb-2">Select which standings to include and arrange their order:</p>
+                
+                <div className="space-y-2">
+                  {(['gross', 'net', 'stableford'] as ScoringType[]).map(type => (
+                    <div key={type} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={pdfOptions.scoringTypes.includes(type)}
+                        onChange={() => toggleScoringType(type)}
+                        className="w-4 h-4 text-green-600 rounded"
+                      />
+                      <span className="text-sm flex-1">{getScoringTypeLabel(type)}</span>
+                      
+                      {pdfOptions.scoringTypes.includes(type) && (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => moveScoringTypeUp(type)}
+                            disabled={pdfOptions.scoringOrder.indexOf(type) === 0}
+                            className="p-1 text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Move up"
+                          >
+                            <ChevronUp className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => moveScoringTypeDown(type)}
+                            disabled={pdfOptions.scoringOrder.indexOf(type) === pdfOptions.scoringOrder.length - 1}
+                            className="p-1 text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Move down"
+                          >
+                            <ChevronDown className="w-4 h-4" />
+                          </button>
+                          <span className="text-xs text-gray-500 ml-1">
+                            #{pdfOptions.scoringOrder.indexOf(type) + 1}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={pdfOptions.includeHoleByHole}
-                  onChange={(e) => setPdfOptions({ ...pdfOptions, includeHoleByHole: e.target.checked })}
-                  className="w-4 h-4 text-green-600 rounded"
-                />
-                <span className="text-sm">Hole-by-Hole Scores</span>
-              </label>
+              <hr />
 
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={pdfOptions.includeSkins}
-                  onChange={(e) => setPdfOptions({ ...pdfOptions, includeSkins: e.target.checked })}
-                  className="w-4 h-4 text-green-600 rounded"
-                />
-                <span className="text-sm">Skins Results</span>
-              </label>
+              {/* Breakdown Options */}
+              <div>
+                <h4 className="font-semibold text-sm text-gray-700 mb-2">Results Breakdown</h4>
+                
+                <label className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={pdfOptions.includeOverall}
+                    onChange={(e) => setPdfOptions({ ...pdfOptions, includeOverall: e.target.checked })}
+                    className="w-4 h-4 text-green-600 rounded"
+                  />
+                  <span className="text-sm">Include Overall Standings</span>
+                </label>
 
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={pdfOptions.includeGroups}
-                  onChange={(e) => setPdfOptions({ ...pdfOptions, includeGroups: e.target.checked })}
-                  className="w-4 h-4 text-green-600 rounded"
-                />
-                <span className="text-sm">Groups & Tee Times</span>
-              </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={pdfOptions.includeByFlight}
+                    onChange={(e) => setPdfOptions({ ...pdfOptions, includeByFlight: e.target.checked })}
+                    className="w-4 h-4 text-green-600 rounded"
+                  />
+                  <span className="text-sm">Include Flight-by-Flight Breakdown</span>
+                </label>
+              </div>
 
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={pdfOptions.includeCourseInfo}
-                  onChange={(e) => setPdfOptions({ ...pdfOptions, includeCourseInfo: e.target.checked })}
-                  className="w-4 h-4 text-green-600 rounded"
-                />
-                <span className="text-sm">Course Information</span>
-              </label>
+              <hr />
 
-              <hr className="my-3" />
+              {/* Additional Content */}
+              <div>
+                <h4 className="font-semibold text-sm text-gray-700 mb-2">Additional Content</h4>
+                
+                <label className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={pdfOptions.includeHoleByHole}
+                    onChange={(e) => setPdfOptions({ ...pdfOptions, includeHoleByHole: e.target.checked })}
+                    className="w-4 h-4 text-green-600 rounded"
+                  />
+                  <span className="text-sm">Hole-by-Hole Scores</span>
+                </label>
 
-              <h4 className="font-semibold text-sm text-gray-700">Styling</h4>
+                <label className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={pdfOptions.includeSkins}
+                    onChange={(e) => setPdfOptions({ ...pdfOptions, includeSkins: e.target.checked })}
+                    className="w-4 h-4 text-green-600 rounded"
+                  />
+                  <span className="text-sm">Skins Results</span>
+                </label>
 
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={pdfOptions.includeLogo}
-                  onChange={(e) => setPdfOptions({ ...pdfOptions, includeLogo: e.target.checked })}
-                  className="w-4 h-4 text-green-600 rounded"
-                />
-                <span className="text-sm">Include Tournament Logo</span>
-              </label>
+                <label className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={pdfOptions.includeGroups}
+                    onChange={(e) => setPdfOptions({ ...pdfOptions, includeGroups: e.target.checked })}
+                    className="w-4 h-4 text-green-600 rounded"
+                  />
+                  <span className="text-sm">Groups & Tee Times</span>
+                </label>
 
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={pdfOptions.includeSponsorLogos}
-                  onChange={(e) => setPdfOptions({ ...pdfOptions, includeSponsorLogos: e.target.checked })}
-                  className="w-4 h-4 text-green-600 rounded"
-                />
-                <span className="text-sm">Include Sponsor Logos</span>
-              </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={pdfOptions.includeCourseInfo}
+                    onChange={(e) => setPdfOptions({ ...pdfOptions, includeCourseInfo: e.target.checked })}
+                    className="w-4 h-4 text-green-600 rounded"
+                  />
+                  <span className="text-sm">Course Information</span>
+                </label>
+              </div>
 
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={pdfOptions.showHandicaps}
-                  onChange={(e) => setPdfOptions({ ...pdfOptions, showHandicaps: e.target.checked })}
-                  className="w-4 h-4 text-green-600 rounded"
-                />
-                <span className="text-sm">Show Handicaps</span>
-              </label>
+              <hr />
 
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={pdfOptions.showQuotas}
-                  onChange={(e) => setPdfOptions({ ...pdfOptions, showQuotas: e.target.checked })}
-                  className="w-4 h-4 text-green-600 rounded"
-                />
-                <span className="text-sm">Show Quotas</span>
-              </label>
+              {/* Styling Options */}
+              <div>
+                <h4 className="font-semibold text-sm text-gray-700 mb-2">Styling</h4>
+
+                <label className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={pdfOptions.includeLogo}
+                    onChange={(e) => setPdfOptions({ ...pdfOptions, includeLogo: e.target.checked })}
+                    className="w-4 h-4 text-green-600 rounded"
+                  />
+                  <span className="text-sm">Include Tournament Logo</span>
+                </label>
+
+                <label className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={pdfOptions.includeSponsorLogos}
+                    onChange={(e) => setPdfOptions({ ...pdfOptions, includeSponsorLogos: e.target.checked })}
+                    className="w-4 h-4 text-green-600 rounded"
+                  />
+                  <span className="text-sm">Include Sponsor Logos</span>
+                </label>
+
+                <label className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={pdfOptions.showHandicaps}
+                    onChange={(e) => setPdfOptions({ ...pdfOptions, showHandicaps: e.target.checked })}
+                    className="w-4 h-4 text-green-600 rounded"
+                  />
+                  <span className="text-sm">Show Handicaps</span>
+                </label>
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={pdfOptions.showQuotas}
+                    onChange={(e) => setPdfOptions({ ...pdfOptions, showQuotas: e.target.checked })}
+                    className="w-4 h-4 text-green-600 rounded"
+                  />
+                  <span className="text-sm">Show Quotas</span>
+                </label>
+              </div>
             </div>
 
             <div className="flex gap-3">
@@ -954,16 +1117,24 @@ export default function TournamentList() {
               </button>
               <button
                 onClick={exportToPdf}
-                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                disabled={pdfOptions.scoringTypes.length === 0 || (!pdfOptions.includeOverall && !pdfOptions.includeByFlight)}
+                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Generate PDF
               </button>
             </div>
+
+            {pdfOptions.scoringTypes.length === 0 && (
+              <p className="text-xs text-red-600 mt-2 text-center">Please select at least one scoring type</p>
+            )}
+            {!pdfOptions.includeOverall && !pdfOptions.includeByFlight && (
+              <p className="text-xs text-red-600 mt-2 text-center">Please select Overall or By Flight</p>
+            )}
           </div>
         </div>
       )}
 
-      {/* Main Content */}
+      {/* Main Content - Tournament Cards */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold text-gray-900">Your Tournaments</h2>
@@ -1017,7 +1188,6 @@ export default function TournamentList() {
                           {tournament.name}
                         </h3>
                         
-                        {/* FINALIZED BADGE */}
                         {tournament.finalized && (
                           <span className="flex items-center gap-1 px-3 py-1 bg-red-100 text-red-800 rounded-lg text-sm font-bold">
                             <Lock className="w-4 h-4" />
@@ -1063,7 +1233,6 @@ export default function TournamentList() {
                         </div>
                       </div>
                       
-                      {/* Show finalized timestamp */}
                       {tournament.finalized && tournament.finalized_at && (
                         <p className="text-xs text-red-600 mt-2">
                           🔒 Finalized: {new Date(tournament.finalized_at).toLocaleString()}
@@ -1072,7 +1241,6 @@ export default function TournamentList() {
                     </div>
                   </div>
 
-                  {/* Sharing Section - Only for Master Admin and Owner */}
                   {(isMaster || isOwner) && subAdmins.length > 0 && (
                     <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                       <div className="flex items-center gap-2 mb-2">
@@ -1112,7 +1280,6 @@ export default function TournamentList() {
                     </div>
                   )}
 
-                  {/* Action Buttons */}
                   <div className="flex gap-2">
                     {canManage && (
                       <>
@@ -1129,7 +1296,6 @@ export default function TournamentList() {
                           Edit
                         </Link>
                         
-                        {/* EXPORT TO EXCEL BUTTON */}
                         <button
                           onClick={() => exportToExcel(tournament.id, tournament.name)}
                           disabled={exporting === tournament.id}
@@ -1139,7 +1305,6 @@ export default function TournamentList() {
                           {exporting === tournament.id ? '...' : 'Excel'}
                         </button>
 
-                        {/* EXPORT TO PDF BUTTON */}
                         <button
                           onClick={() => openPdfModal(tournament.id, tournament.name)}
                           disabled={exporting === tournament.id}
@@ -1149,7 +1314,6 @@ export default function TournamentList() {
                           PDF
                         </button>
                         
-                        {/* FINALIZE / UNLOCK BUTTON */}
                         {tournament.finalized ? (
                           <button
                             onClick={() => unlockTournament(tournament.id, tournament.name)}
