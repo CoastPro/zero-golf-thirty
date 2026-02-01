@@ -3,7 +3,7 @@ import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { RefreshCw, Trophy, Edit, Menu as MenuIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Player, Score, Tournament } from '../types/database.types';
-import { buildLeaderboard, buildSkinsLeaderboard, formatVsPar, formatHolesPlayed } from '../lib/calculations';
+import { buildLeaderboard, buildSkinsLeaderboard, formatVsPar, formatHolesPlayed, assignRanks, assignStablefordRanks } from '../lib/calculations';
 
 type LeaderboardTab = 'gross' | 'stableford' | 'skins';
 
@@ -83,6 +83,21 @@ export default function Leaderboard() {
   const hiddenTabs: LeaderboardTab[] = tournament.leaderboard_settings?.hidden || [];
   const visibleTabs = tabOrder.filter(tab => !hiddenTabs.includes(tab));
   const skinsData = tournament.skins_enabled ? buildSkinsLeaderboard(players, scores, tournament) : null;
+
+  // Apply ranking for Gross standings
+  const rankedGrossLeaderboard = assignRanks(
+    leaderboard,
+    (entry) => entry.vsParGross,
+    (entry) => entry.holesPlayed > 0
+  );
+
+  // Apply ranking for Stableford standings
+  const rankedStablefordLeaderboard = assignStablefordRanks(
+    leaderboard,
+    (entry) => entry.stablefordPoints,
+    (entry) => entry.vsQuota,
+    (entry) => entry.holesPlayed > 0
+  );
 
   // Build score link with group parameter if it exists
   const scoreLink = groupIdParam 
@@ -192,11 +207,14 @@ export default function Leaderboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {leaderboard.map((entry, index) => {
-                  const isLeader = index === 0 && entry.holesPlayed > 0;
+                {rankedGrossLeaderboard.map((entry) => {
+                  const isLeader = entry.rank === '1';
                   return (
                     <tr key={entry.player.id} className={`hover:bg-gray-50 ${isLeader ? 'bg-yellow-50' : ''}`}>
-                      <td className="px-1.5 py-1.5 font-semibold">{entry.holesPlayed === 0 ? '-' : index + 1}{isLeader && <Trophy className="w-3 h-3 inline ml-0.5 text-yellow-600" />}</td>
+                      <td className="px-1.5 py-1.5 font-semibold">
+                        {entry.rank}
+                        {isLeader && <Trophy className="w-3 h-3 inline ml-0.5 text-yellow-600" />}
+                      </td>
                       <td className="px-1.5 py-1.5 font-medium truncate max-w-[100px]">{entry.player.name}</td>
                       {tournament.show_handicaps && <td className="px-1.5 py-1.5 text-center">{entry.player.handicap}</td>}
                       <td className="px-1.5 py-1.5 text-center font-medium">{formatHolesPlayed(entry.holesPlayed)}</td>
@@ -228,27 +246,23 @@ export default function Leaderboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {leaderboard
-                  .sort((a, b) => {
-                    if (b.vsQuota !== a.vsQuota) {
-                      return b.vsQuota - a.vsQuota;
-                    }
-                    return b.stablefordPoints - a.stablefordPoints;
-                  })
-                  .map((entry, index) => {
-                    const isLeader = index === 0 && entry.holesPlayed > 0;
-                    const vsQuotaDisplay = entry.isComplete ? entry.vsQuota.toFixed(0) : entry.vsQuota.toFixed(1);
-                    return (
-                      <tr key={entry.player.id} className={`hover:bg-gray-50 ${isLeader ? 'bg-yellow-50' : ''}`}>
-                        <td className="px-1.5 py-1.5 font-semibold">{entry.holesPlayed === 0 ? '-' : index + 1}{isLeader && <Trophy className="w-3 h-3 inline ml-0.5 text-yellow-600" />}</td>
-                        <td className="px-1.5 py-1.5 font-medium truncate max-w-[100px]">{entry.player.name}</td>
-                        {tournament.show_quotas && <td className="px-1.5 py-1.5 text-center">{entry.player.quota}</td>}
-                        <td className="px-1.5 py-1.5 text-center font-bold">{entry.holesPlayed > 0 ? entry.stablefordPoints : '-'}</td>
-                        <td className="px-1.5 py-1.5 text-center font-medium">{formatHolesPlayed(entry.holesPlayed)}</td>
-                        <td className="px-1.5 py-1.5 text-center font-semibold">{entry.holesPlayed > 0 ? `${entry.vsQuota > 0 ? '+' : ''}${vsQuotaDisplay}` : '-'}</td>
-                      </tr>
-                    );
-                  })}
+                {rankedStablefordLeaderboard.map((entry) => {
+                  const isLeader = entry.rank === '1';
+                  const vsQuotaDisplay = entry.isComplete ? entry.vsQuota.toFixed(0) : entry.vsQuota.toFixed(1);
+                  return (
+                    <tr key={entry.player.id} className={`hover:bg-gray-50 ${isLeader ? 'bg-yellow-50' : ''}`}>
+                      <td className="px-1.5 py-1.5 font-semibold">
+                        {entry.rank}
+                        {isLeader && <Trophy className="w-3 h-3 inline ml-0.5 text-yellow-600" />}
+                      </td>
+                      <td className="px-1.5 py-1.5 font-medium truncate max-w-[100px]">{entry.player.name}</td>
+                      {tournament.show_quotas && <td className="px-1.5 py-1.5 text-center">{entry.player.quota}</td>}
+                      <td className="px-1.5 py-1.5 text-center font-bold">{entry.holesPlayed > 0 ? entry.stablefordPoints : '-'}</td>
+                      <td className="px-1.5 py-1.5 text-center font-medium">{formatHolesPlayed(entry.holesPlayed)}</td>
+                      <td className="px-1.5 py-1.5 text-center font-semibold">{entry.holesPlayed > 0 ? `${entry.vsQuota > 0 ? '+' : ''}${vsQuotaDisplay}` : '-'}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
