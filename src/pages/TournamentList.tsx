@@ -404,11 +404,16 @@ export default function TournamentList() {
           );
         }
 
-        let title = '';
-        if (type === 'gross') title = 'Gross Standings';
-        if (type === 'net') title = 'Net Standings';
-        if (type === 'stableford') title = 'Stableford Standings';
-        if (flight) title += ` - Flight ${flight}`;
+let title = '';
+if (type === 'gross') title = 'Gross Standings';
+if (type === 'net') title = 'Net Standings';
+if (type === 'stableford') title = 'Stableford Standings';
+
+if (flight) {
+  title += ` - Flight ${flight}`;
+} else {
+  title += ' - Overall';
+}
 
         if (yPos > 250) {
           doc.addPage();
