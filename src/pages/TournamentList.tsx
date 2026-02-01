@@ -313,15 +313,15 @@ export default function TournamentList() {
       XLSX.utils.book_append_sheet(wb, groupsSheet, 'Groups');
 
       // SHEET 5: COURSE INFO
-      const courseData = tournament.course_par.map((par, index) => ({
+      const courseData = tournament.course_par.map((par: number, index: number) => ({
         'Hole': index + 1,
         'Par': par
       }));
 
       // Add totals
-      const frontNine = tournament.course_par.slice(0, 9).reduce((a, b) => a + b, 0);
-      const backNine = tournament.course_par.slice(9, 18).reduce((a, b) => a + b, 0);
-      
+      const frontNine = tournament.course_par.slice(0, 9).reduce((a: number, b: number) => a + b, 0);
+      const backNine = tournament.course_par.slice(9, 18).reduce((a: number, b: number) => a + b, 0);
+
       courseData.push({ 'Hole': 'OUT', 'Par': frontNine });
       courseData.push({ 'Hole': 'IN', 'Par': backNine });
       courseData.push({ 'Hole': 'TOTAL', 'Par': frontNine + backNine });
