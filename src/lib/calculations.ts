@@ -104,17 +104,18 @@ export const assignRanks = <T>(
   const rankedWithScores = sorted.map((entry, index, arr) => {
     const currentValue = getCompareValue(entry);
     
-    // Find how many players have the same score
-    const tiedPlayers = arr.filter(e => getCompareValue(e) === currentValue);
-    const isTied = tiedPlayers.length > 1;
-    
-    // Find the actual rank position (1-based, considering ties)
+    // Count how many players are BETTER (lower score)
     let position = 1;
-    for (let i = 0; i < index; i++) {
-      if (getCompareValue(arr[i]) !== currentValue) {
+    for (let i = 0; i < arr.length; i++) {
+      const otherValue = getCompareValue(arr[i]);
+      if (otherValue !== null && currentValue !== null && otherValue < currentValue) {
         position++;
       }
     }
+    
+    // Find how many players have the same score
+    const tiedPlayers = arr.filter(e => getCompareValue(e) === currentValue);
+    const isTied = tiedPlayers.length > 1;
     
     return {
       ...entry,
@@ -155,23 +156,28 @@ export const assignStablefordRanks = <T>(
   });
 
   // Assign ranks with proper tie handling
-  let currentRank = 1;
   const rankedWithScores = sorted.map((entry, index, arr) => {
     const currentVsQuota = getVsQuota(entry);
     const currentPoints = getPoints(entry);
     
-    // Check if this is a new rank (different from previous player)
-    if (index > 0) {
-      const prevVsQuota = getVsQuota(arr[index - 1]);
-      const prevPoints = getPoints(arr[index - 1]);
+    // Count how many players are BETTER than this player
+    let position = 1;
+    for (let i = 0; i < arr.length; i++) {
+      const otherVsQuota = getVsQuota(arr[i]);
+      const otherPoints = getPoints(arr[i]);
       
-      // If different score, update rank to current position
-      if (currentVsQuota !== prevVsQuota || currentPoints !== prevPoints) {
-        currentRank = index + 1;
+      // Only count players that are strictly better
+      if (otherVsQuota > currentVsQuota) {
+        position++;
+      } else if (otherVsQuota === currentVsQuota && otherPoints > currentPoints) {
+        position++;
+      } else if (otherVsQuota === currentVsQuota && otherPoints === currentPoints && i < index) {
+        // Same score but processed earlier - don't increment position
+        continue;
       }
     }
     
-    // Find tied players (same vsQuota AND same points)
+    // Find all tied players (same vsQuota AND same points)
     const tiedPlayers = arr.filter(e => 
       getVsQuota(e) === currentVsQuota && getPoints(e) === currentPoints
     );
@@ -179,7 +185,7 @@ export const assignStablefordRanks = <T>(
     
     return {
       ...entry,
-      rank: isTied ? `T${currentRank}` : `${currentRank}`
+      rank: isTied ? `T${position}` : `${position}`
     };
   });
 
