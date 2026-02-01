@@ -7,7 +7,7 @@ import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabase';
 import { Tournament, User, TournamentAccess, Player, Score, Group } from '../types/database.types';
 import { useAuth } from '../context/AuthContext';
-import { buildLeaderboard, buildSkinsLeaderboard } from '../lib/calculations';
+import { buildLeaderboard, buildSkinsLeaderboard, assignRanks, assignStablefordRanks } from '../lib/calculations';
 
 type ScoringType = 'gross' | 'net' | 'stableford';
 
@@ -211,14 +211,12 @@ export default function TournamentList() {
 
   const toggleScoringType = (type: ScoringType) => {
     if (pdfOptions.scoringTypes.includes(type)) {
-      // Remove it
       setPdfOptions({
         ...pdfOptions,
         scoringTypes: pdfOptions.scoringTypes.filter(t => t !== type),
         scoringOrder: pdfOptions.scoringOrder.filter(t => t !== type)
       });
     } else {
-      // Add it
       setPdfOptions({
         ...pdfOptions,
         scoringTypes: [...pdfOptions.scoringTypes, type],
@@ -260,7 +258,6 @@ export default function TournamentList() {
     closePdfModal();
 
     try {
-      // Fetch all tournament data
       const { data: tournament, error: tournamentError } = await supabase
         .from('tournaments')
         .select('*')
@@ -299,17 +296,27 @@ export default function TournamentList() {
 
       if (gpError) throw gpError;
 
-      // Create PDF
       const doc = new jsPDF();
-      let yPos = 20;
+      let yPos = 10;
 
-      // Add logo if enabled
+      // Add tournament logo with proper aspect ratio
       if (pdfOptions.includeLogo && tournament.tournament_logo_url) {
         try {
-          doc.addImage(tournament.tournament_logo_url, 'PNG', 15, yPos, 40, 20);
-          yPos += 25;
+          const img = new Image();
+          img.src = tournament.tournament_logo_url;
+          await new Promise((resolve) => { img.onload = resolve; });
+          
+          const maxWidth = 50;
+          const maxHeight = 25;
+          const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+          const width = img.width * ratio;
+          const height = img.height * ratio;
+          
+          doc.addImage(tournament.tournament_logo_url, 'PNG', 15, yPos, width, height);
+          yPos += height + 5;
         } catch (e) {
           console.error('Failed to add logo:', e);
+          yPos += 10;
         }
       }
 
@@ -329,59 +336,80 @@ export default function TournamentList() {
       if (tournament.tournament_date) {
         doc.setFontSize(10);
         doc.text(new Date(tournament.tournament_date + 'T00:00:00').toLocaleDateString(), 105, yPos, { align: 'center' });
-        yPos += 15;
+        yPos += 10;
       }
 
-      // Add sponsor logos if enabled
-      if (pdfOptions.includeSponsorLogos) {
+      // Add sponsor logos with proper aspect ratio
+      if (pdfOptions.includeSponsorLogos && (tournament.leaderboard_logo_left || tournament.leaderboard_logo_right)) {
+        const logoYPos = yPos;
+        
         if (tournament.leaderboard_logo_left) {
           try {
-            doc.addImage(tournament.leaderboard_logo_left, 'PNG', 15, yPos, 30, 15);
+            const img = new Image();
+            img.src = tournament.leaderboard_logo_left;
+            await new Promise((resolve) => { img.onload = resolve; });
+            
+            const maxWidth = 40;
+            const maxHeight = 20;
+            const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+            const width = img.width * ratio;
+            const height = img.height * ratio;
+            
+            doc.addImage(tournament.leaderboard_logo_left, 'PNG', 15, logoYPos, width, height);
           } catch (e) {
             console.error('Failed to add left sponsor logo:', e);
           }
         }
+        
         if (tournament.leaderboard_logo_right) {
           try {
-            doc.addImage(tournament.leaderboard_logo_right, 'PNG', 165, yPos, 30, 15);
+            const img = new Image();
+            img.src = tournament.leaderboard_logo_right;
+            await new Promise((resolve) => { img.onload = resolve; });
+            
+            const maxWidth = 40;
+            const maxHeight = 20;
+            const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+            const width = img.width * ratio;
+            const height = img.height * ratio;
+            
+            doc.addImage(tournament.leaderboard_logo_right, 'PNG', 195 - width, logoYPos, width, height);
           } catch (e) {
             console.error('Failed to add right sponsor logo:', e);
           }
         }
-        yPos += 20;
+        
+        yPos += 25;
       }
 
       // Helper function to add standings table
       const addStandingsTable = (type: ScoringType, flight: string | null) => {
         const leaderboard = buildLeaderboard(players || [], scores || [], tournament, flight);
         
-        // Sort based on type
-        let sortedLeaderboard = [...leaderboard];
-        if (type === 'gross') {
-          sortedLeaderboard.sort((a, b) => a.grossScore - b.grossScore);
-        } else if (type === 'net') {
-          sortedLeaderboard.sort((a, b) => {
-            if (a.netScore === null) return 1;
-            if (b.netScore === null) return -1;
-            return a.netScore - b.netScore;
-          });
-        } else if (type === 'stableford') {
-          sortedLeaderboard.sort((a, b) => {
-            if (b.vsQuota !== a.vsQuota) {
-              return b.vsQuota - a.vsQuota;
-            }
-            return b.stablefordPoints - a.stablefordPoints;
-          });
+        // Apply ranking based on type
+        let rankedLeaderboard;
+        if (type === 'stableford') {
+          rankedLeaderboard = assignStablefordRanks(
+            leaderboard,
+            (entry) => entry.stablefordPoints,
+            (entry) => entry.vsQuota,
+            (entry) => entry.holesPlayed > 0
+          );
+        } else {
+          // For gross and net, use assignRanks
+          rankedLeaderboard = assignRanks(
+            leaderboard,
+            (entry) => type === 'net' ? (entry.netScore || 999) : entry.vsParGross,
+            (entry) => entry.holesPlayed > 0
+          );
         }
 
-        // Build title
         let title = '';
         if (type === 'gross') title = 'Gross Standings';
         if (type === 'net') title = 'Net Standings';
         if (type === 'stableford') title = 'Stableford Standings';
         if (flight) title += ` - Flight ${flight}`;
 
-        // Check if new page needed
         if (yPos > 250) {
           doc.addPage();
           yPos = 20;
@@ -392,24 +420,24 @@ export default function TournamentList() {
         doc.text(title, 15, yPos);
         yPos += 5;
 
-        // Build headers based on type
+        // Build headers (REMOVED "Played" column)
         const headers = ['Rank', 'Player'];
         if (!flight) headers.push('Flight');
         if (pdfOptions.showHandicaps) headers.push('HC');
         if (pdfOptions.showQuotas && type === 'stableford') headers.push('Quota');
         
         if (type === 'gross') {
-          headers.push('Played', 'Score', '±');
+          headers.push('Score', '±');
         } else if (type === 'net') {
-          headers.push('Played', 'Net', '±');
+          headers.push('Net', '±');
         } else if (type === 'stableford') {
-          headers.push('Played', 'Points', 'vs Q');
+          headers.push('Points', 'vs Quota'); // CHANGED from "vs Q"
         }
 
-        // Build rows
-        const rows = sortedLeaderboard.map((entry, index) => {
+        // Build rows using rank from rankedLeaderboard
+        const rows = rankedLeaderboard.map((entry) => {
           const row: any[] = [
-            entry.holesPlayed === 0 ? '-' : index + 1,
+            entry.rank, // Use the calculated rank with T prefix
             entry.player.name
           ];
           if (!flight) row.push(entry.player.flight);
@@ -418,19 +446,16 @@ export default function TournamentList() {
 
           if (type === 'gross') {
             row.push(
-              entry.holesPlayed,
               entry.holesPlayed > 0 ? entry.grossScore : '-',
               entry.holesPlayed > 0 ? (entry.vsParGross > 0 ? `+${entry.vsParGross}` : entry.vsParGross) : '-'
             );
           } else if (type === 'net') {
             row.push(
-              entry.holesPlayed,
               entry.netScore !== null ? entry.netScore : '-',
               entry.vsParNet !== null ? (entry.vsParNet > 0 ? `+${entry.vsParNet}` : entry.vsParNet) : '-'
             );
           } else if (type === 'stableford') {
             row.push(
-              entry.holesPlayed,
               entry.holesPlayed > 0 ? entry.stablefordPoints : '-',
               entry.holesPlayed > 0 ? (entry.vsQuota > 0 ? `+${entry.vsQuota.toFixed(1)}` : entry.vsQuota.toFixed(1)) : '-'
             );
@@ -446,7 +471,7 @@ export default function TournamentList() {
           theme: 'grid',
           headStyles: { fillColor: [22, 101, 52], fontSize: 8 },
           bodyStyles: { fontSize: 7 },
-          columnStyles: { 0: { cellWidth: 10 } }
+          columnStyles: { 0: { cellWidth: 15 } } // WIDENED from 10 to 15
         });
 
         yPos = (doc as any).lastAutoTable.finalY + 10;
@@ -636,11 +661,9 @@ export default function TournamentList() {
         });
       }
 
-      // Generate filename with date
       const date = new Date().toISOString().split('T')[0];
       const filename = `${selectedTournamentForPdf.name.replace(/[^a-z0-9]/gi, '_')}_Results_${date}.pdf`;
 
-      // Download file
       doc.save(filename);
 
       alert('✅ PDF downloaded successfully!');
@@ -1134,7 +1157,7 @@ export default function TournamentList() {
         </div>
       )}
 
-      {/* Main Content - Tournament Cards */}
+      {/* Tournament Cards - Rest of the component remains the same */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold text-gray-900">Your Tournaments</h2>
