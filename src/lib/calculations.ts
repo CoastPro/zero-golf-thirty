@@ -81,7 +81,7 @@ export const formatHolesPlayed = (holesPlayed: number): string => {
   return `${holesPlayed}`;
 };
 
-// Helper function to assign ranks with tie handling
+// Helper function to assign ranks with tie handling (for Gross/Net - lower is better)
 export const assignRanks = <T>(
   entries: T[],
   getCompareValue: (entry: T) => number | null,
@@ -91,23 +91,28 @@ export const assignRanks = <T>(
   const withScores = entries.filter(hasPlayed);
   const withoutScores = entries.filter(e => !hasPlayed(e));
 
-  // Assign ranks to players with scores
-  const rankedWithScores = withScores.map((entry, index, arr) => {
+  // Sort by compare value (lower is better)
+  const sorted = [...withScores].sort((a, b) => {
+    const valA = getCompareValue(a);
+    const valB = getCompareValue(b);
+    if (valA === null) return 1;
+    if (valB === null) return -1;
+    return valA - valB;
+  });
+
+  // Assign ranks
+  const rankedWithScores = sorted.map((entry, index, arr) => {
     const currentValue = getCompareValue(entry);
     
     // Find how many players have the same score
     const tiedPlayers = arr.filter(e => getCompareValue(e) === currentValue);
     const isTied = tiedPlayers.length > 1;
     
-    // Find the actual rank position (how many players are ahead)
+    // Find the actual rank position (1-based, considering ties)
     let position = 1;
-    for (let i = 0; i < arr.length; i++) {
-      const otherValue = getCompareValue(arr[i]);
-      if (otherValue !== null && currentValue !== null) {
-        // For scoring where lower is better (gross, net)
-        if (otherValue < currentValue) {
-          position++;
-        }
+    for (let i = 0; i < index; i++) {
+      if (getCompareValue(arr[i]) !== currentValue) {
+        position++;
       }
     }
     
@@ -142,17 +147,29 @@ export const assignStablefordRanks = <T>(
     const vsQuotaA = getVsQuota(a);
     const vsQuotaB = getVsQuota(b);
     
-    if (vsQuotaA !== vsQuotaB) {
+    if (vsQuotaB !== vsQuotaA) {
       return vsQuotaB - vsQuotaA; // Higher vsQuota is better
     }
     
     return getPoints(b) - getPoints(a); // Higher points is better
   });
 
-  // Assign ranks
+  // Assign ranks with proper tie handling
+  let currentRank = 1;
   const rankedWithScores = sorted.map((entry, index, arr) => {
     const currentVsQuota = getVsQuota(entry);
     const currentPoints = getPoints(entry);
+    
+    // Check if this is a new rank (different from previous player)
+    if (index > 0) {
+      const prevVsQuota = getVsQuota(arr[index - 1]);
+      const prevPoints = getPoints(arr[index - 1]);
+      
+      // If different score, update rank to current position
+      if (currentVsQuota !== prevVsQuota || currentPoints !== prevPoints) {
+        currentRank = index + 1;
+      }
+    }
     
     // Find tied players (same vsQuota AND same points)
     const tiedPlayers = arr.filter(e => 
@@ -160,23 +177,9 @@ export const assignStablefordRanks = <T>(
     );
     const isTied = tiedPlayers.length > 1;
     
-    // Find actual position
-    let position = 1;
-    for (let i = 0; i < arr.length; i++) {
-      const otherVsQuota = getVsQuota(arr[i]);
-      const otherPoints = getPoints(arr[i]);
-      
-      // Count how many are better
-      if (otherVsQuota > currentVsQuota) {
-        position++;
-      } else if (otherVsQuota === currentVsQuota && otherPoints > currentPoints) {
-        position++;
-      }
-    }
-    
     return {
       ...entry,
-      rank: isTied ? `T${position}` : `${position}`
+      rank: isTied ? `T${currentRank}` : `${currentRank}`
     };
   });
 
