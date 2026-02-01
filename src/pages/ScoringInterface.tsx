@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
-import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Minus, Plus, BarChart3 } from 'lucide-react';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Minus, Plus, BarChart3, Lock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Player, Group, Score, Tournament } from '../types/database.types';
 
 interface GroupWithPlayers extends Group {
   players: Player[];
+  round_finished?: boolean;
+  finished_at?: string;
+  locked_by_admin?: boolean;
 }
 
 export default function ScoringInterface() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const groupIdParam = searchParams.get('group');
   const isRestricted = !!groupIdParam;
 
@@ -21,6 +25,7 @@ export default function ScoringInterface() {
   const [scores, setScores] = useState<Record<string, Record<number, number | null>>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [finishing, setFinishing] = useState(false);
 
   // Load saved hole from localStorage on mount
   useEffect(() => {
@@ -55,7 +60,7 @@ export default function ScoringInterface() {
   }, [selectedGroup]);
 
   useEffect(() => {
-    if (!saving && selectedGroup && Object.keys(scores).length > 0) {
+    if (!saving && selectedGroup && Object.keys(scores).length > 0 && canEdit) {
       const timer = setTimeout(() => {
         saveScores();
       }, 800);
@@ -187,7 +192,48 @@ export default function ScoringInterface() {
     }
   };
 
+  const handleFinishRound = async () => {
+    if (!selectedGroup) return;
+
+    if (!confirm('Submit round? You won\'t be able to edit scores unless admin unlocks.')) {
+      return;
+    }
+
+    setFinishing(true);
+    try {
+      // Save any pending scores first
+      await saveScores();
+
+      // Mark group as finished
+      const { error } = await supabase
+        .from('groups')
+        .update({
+          round_finished: true,
+          finished_at: new Date().toISOString()
+        })
+        .eq('id', selectedGroup.id);
+
+      if (error) throw error;
+
+      // Clear localStorage for this group
+      if (id && groupIdParam) {
+        const storageKey = `scoring_hole_${id}_${groupIdParam}`;
+        localStorage.removeItem(storageKey);
+      }
+
+      // Redirect to leaderboard
+      navigate(`/tournament/${id}/leaderboard${groupIdParam ? `?group=${groupIdParam}` : ''}`);
+    } catch (error) {
+      console.error('Error finishing round:', error);
+      alert('Failed to finish round. Please try again.');
+    } finally {
+      setFinishing(false);
+    }
+  };
+
   const updateScore = (playerId: string, delta: number) => {
+    if (!canEdit) return;
+
     setScores(prev => {
       const currentScore = prev[playerId]?.[currentHole] || 0;
       const newScore = Math.max(1, Math.min(10, currentScore + delta));
@@ -219,6 +265,19 @@ export default function ScoringInterface() {
     }
   };
 
+  // Check if scores can be edited
+  const canEdit = !selectedGroup?.round_finished && 
+                  !selectedGroup?.locked_by_admin && 
+                  !tournament?.finalized;
+
+  // Check if all holes have been scored for all players
+  const allHolesScored = selectedGroup?.players.every(player => {
+    for (let hole = 1; hole <= 18; hole++) {
+      if (!scores[player.id]?.[hole]) return false;
+    }
+    return true;
+  }) || false;
+
   if (loading) {
     return <div className="text-center py-12">Loading...</div>;
   }
@@ -235,6 +294,51 @@ export default function ScoringInterface() {
             Set up groups first
           </Link>
         )}
+      </div>
+    );
+  }
+
+  // If tournament is finalized, show message
+  if (tournament.finalized) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-12 text-center">
+        <div className="bg-green-50 border-2 border-green-600 rounded-lg p-8">
+          <Lock className="w-16 h-16 text-green-600 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">🏆 Tournament Finalized</h2>
+          <p className="text-gray-600 mb-6">
+            Scores are locked. View the leaderboard for final results.
+          </p>
+          <button
+            onClick={() => navigate(`/tournament/${id}/leaderboard`)}
+            className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
+          >
+            View Final Results
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // If round is finished, show message
+  if (selectedGroup.round_finished) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-12 text-center">
+        <div className="bg-green-50 border-2 border-green-600 rounded-lg p-8">
+          <Lock className="w-16 h-16 text-green-600 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">✅ Round Submitted!</h2>
+          <p className="text-gray-600 mb-2">
+            Scores are locked.
+          </p>
+          <p className="text-sm text-gray-500 mb-6">
+            Need to edit? Contact tournament admin to unlock this group.
+          </p>
+          <button
+            onClick={() => navigate(`/tournament/${id}/leaderboard${groupIdParam ? `?group=${groupIdParam}` : ''}`)}
+            className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
+          >
+            View Leaderboard
+          </button>
+        </div>
       </div>
     );
   }
@@ -359,7 +463,7 @@ export default function ScoringInterface() {
               <div className="flex items-center justify-between">
                 <button
                   onClick={() => updateScore(player.id, -1)}
-                  disabled={playerScore <= 1}
+                  disabled={playerScore <= 1 || !canEdit}
                   className="p-2 bg-red-500 hover:bg-red-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Minus className="w-6 h-6" />
@@ -381,7 +485,7 @@ export default function ScoringInterface() {
 
                 <button
                   onClick={() => updateScore(player.id, 1)}
-                  disabled={playerScore >= 10}
+                  disabled={playerScore >= 10 || !canEdit}
                   className="p-2 bg-green-500 hover:bg-green-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-6 h-6" />
@@ -392,6 +496,19 @@ export default function ScoringInterface() {
         })}
       </div>
 
+      {/* Finish Round Button - Show after all holes scored */}
+      {allHolesScored && canEdit && (
+        <div className="mt-4">
+          <button
+            onClick={handleFinishRound}
+            disabled={finishing}
+            className="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {finishing ? 'Submitting...' : '✓ Finish & Submit Round'}
+          </button>
+        </div>
+      )}
+
       {/* Auto-save indicator */}
       {saving && (
         <div className="fixed bottom-2 right-2 bg-gray-900 text-white px-3 py-1.5 rounded text-sm shadow-lg">
@@ -401,13 +518,13 @@ export default function ScoringInterface() {
 
       {/* View Leaderboard */}
       <div className="mt-4 flex justify-center">
-        <Link
-          to={`/tournament/${id}/leaderboard${groupIdParam ? `?group=${groupIdParam}` : ''}`}
+        <button
+          onClick={() => navigate(`/tournament/${id}/leaderboard${groupIdParam ? `?group=${groupIdParam}` : ''}`)}
           className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-semibold text-sm transition-colors"
         >
           <BarChart3 className="w-4 h-4" />
           View Leaderboard
-        </Link>
+        </button>
       </div>
     </div>
   );

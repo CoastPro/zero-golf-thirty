@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Users, ArrowRight, Trash2, Clock, Target, QrCode, Download, Link2, Check, Printer, FileText, Edit2, X } from 'lucide-react';
+import { Plus, Users, ArrowRight, Trash2, Clock, Target, QrCode, Download, Link2, Check, Printer, FileText, Edit2, X, Lock, Unlock } from 'lucide-react';
 import QRCode from 'qrcode';
 import { supabase } from '../lib/supabase';
 import { Player, Group, Tournament } from '../types/database.types';
@@ -9,6 +9,9 @@ import PrintableCartPlacard from '../components/PrintableCartPlacard';
 
 interface GroupWithPlayers extends Group {
   players: (Player & { position: number; cart_number: number | null })[];
+  round_finished?: boolean;
+  finished_at?: string;
+  locked_by_admin?: boolean;
 }
 
 export default function GroupManagement() {
@@ -175,6 +178,27 @@ export default function GroupManagement() {
     } catch (error) {
       console.error('Error deleting group:', error);
       alert('Failed to delete group');
+    }
+  };
+
+  const unlockGroup = async (groupId: string, groupNumber: number) => {
+    if (!confirm(`Unlock Group ${groupNumber}? Scorer will be able to edit scores again.`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('groups')
+        .update({ 
+          round_finished: false,
+          finished_at: null,
+          locked_by_admin: false
+        })
+        .eq('id', groupId);
+
+      if (error) throw error;
+      loadData();
+    } catch (error) {
+      console.error('Error unlocking group:', error);
+      alert('Failed to unlock group');
     }
   };
 
@@ -421,6 +445,9 @@ export default function GroupManagement() {
 
   const unassignedPlayers = players.filter(p => !assignedPlayerIds.has(p.id));
 
+  // Count finished groups
+  const finishedCount = groups.filter(g => g.round_finished).length;
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
@@ -429,6 +456,11 @@ export default function GroupManagement() {
           <p className="text-gray-600 mt-1">
             Group Management - {groups.length} groups, {unassignedPlayers.length} unassigned players
           </p>
+          {finishedCount > 0 && (
+            <p className="text-green-600 font-semibold mt-1">
+              ✅ {finishedCount} of {groups.length} groups finished
+            </p>
+          )}
         </div>
       </div>
 
@@ -610,6 +642,27 @@ export default function GroupManagement() {
                         </button>
                       </div>
                     )}
+
+                    {/* Status Badges */}
+                    <div className="flex items-center gap-2">
+                      {group.round_finished ? (
+                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                          <Check className="w-3 h-3" />
+                          Finished
+                        </span>
+                      ) : (
+                        <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          In Progress
+                        </span>
+                      )}
+                      {group.locked_by_admin && (
+                        <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                          <Lock className="w-3 h-3" />
+                          Locked
+                        </span>
+                      )}
+                    </div>
                     
                     {startType === 'shotgun' ? (
                       <div className="flex items-center gap-2">
@@ -653,6 +706,16 @@ export default function GroupManagement() {
                   </div>
                   
                   <div className="flex items-center gap-2">
+                    {/* Unlock button - only show if group is finished */}
+                    {group.round_finished && (
+                      <button
+                        onClick={() => unlockGroup(group.id, group.number)}
+                        className="p-2 bg-orange-600 hover:bg-orange-700 rounded transition-colors"
+                        title="Unlock Group"
+                      >
+                        <Unlock className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={() => setPrintScorecardGroupId(group.id)}
                       className="p-2 bg-orange-600 hover:bg-orange-700 rounded transition-colors"
@@ -709,6 +772,15 @@ export default function GroupManagement() {
                   {group.qr_code && (
                     <div className="mb-4 flex justify-center">
                       <img src={group.qr_code} alt={`QR Code for Group ${group.number}`} className="w-40 h-40 border-2 border-gray-200 rounded" />
+                    </div>
+                  )}
+
+                  {/* Show finished timestamp if available */}
+                  {group.round_finished && group.finished_at && (
+                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-800">
+                        ✅ Round submitted: {new Date(group.finished_at).toLocaleString()}
+                      </p>
                     </div>
                   )}
                   
