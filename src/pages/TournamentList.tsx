@@ -132,30 +132,43 @@ export default function TournamentList() {
     }
   };
 
-  const unlockTournament = async (tournamentId: string, tournamentName: string) => {
-    if (!confirm(`Unlock "${tournamentName}"?\n\nThis will allow scores to be edited again.`)) {
-      return;
-    }
+const unlockTournament = async (tournamentId: string, tournamentName: string) => {
+  if (!confirm(`Unlock "${tournamentName}"?\n\nThis will:\n- Unlock the tournament\n- Unlock ALL groups\n- Allow scores to be edited again`)) {
+    return;
+  }
 
-    try {
-      const { error } = await supabase
-        .from('tournaments')
-        .update({
-          finalized: false,
-          finalized_at: null,
-          finalized_by: null
-        })
-        .eq('id', tournamentId);
+  try {
+    // Unlock the tournament
+    const { error: tournamentError } = await supabase
+      .from('tournaments')
+      .update({
+        finalized: false,
+        finalized_at: null,
+        finalized_by: null
+      })
+      .eq('id', tournamentId);
 
-      if (error) throw error;
+    if (tournamentError) throw tournamentError;
 
-      alert('🔓 Tournament unlocked! Scores can be edited again.');
-      loadData();
-    } catch (error) {
-      console.error('Error unlocking tournament:', error);
-      alert('Failed to unlock tournament');
-    }
-  };
+    // Unlock all groups in this tournament
+    const { error: groupsError } = await supabase
+      .from('groups')
+      .update({
+        round_finished: false,
+        finished_at: null,
+        locked_by_admin: false
+      })
+      .eq('tournament_id', tournamentId);
+
+    if (groupsError) throw groupsError;
+
+    alert('🔓 Tournament unlocked! All groups can edit scores again.');
+    loadData();
+  } catch (error) {
+    console.error('Error unlocking tournament:', error);
+    alert('Failed to unlock tournament');
+  }
+};
 
   const toggleUserAccess = async (tournamentId: string, userId: string) => {
     try {
