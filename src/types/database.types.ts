@@ -48,6 +48,11 @@ export interface Tournament {
   };
   created_at: string;
   updated_at: string;
+  
+  // ✅ NEW FIELDS FOR FINALIZE FEATURE
+  finalized?: boolean;
+  finalized_at?: string | null;
+  finalized_by?: string | null;
 }
 
 export interface StablefordPoints {
@@ -81,6 +86,11 @@ export interface Group {
   tee_time: string | null;
   qr_code: string | null;
   created_at: string;
+  
+  // ✅ NEW FIELDS FOR FINISH ROUND FEATURE
+  round_finished?: boolean;
+  finished_at?: string | null;
+  locked_by_admin?: boolean;
 }
 
 export interface GroupPlayer {

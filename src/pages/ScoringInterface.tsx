@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Minus, Plus, BarChart3, Lock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Player, Group, Score, Tournament } from '../types/database.types';
