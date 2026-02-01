@@ -143,7 +143,7 @@ export const assignStablefordRanks = <T>(
   const withScores = entries.filter(hasPlayed);
   const withoutScores = entries.filter(e => !hasPlayed(e));
 
-  // Sort by vsQuota (desc), then by points (desc)
+  // Sort by vsQuota (desc), then by points (desc) for display order
   const sorted = [...withScores].sort((a, b) => {
     const vsQuotaA = getVsQuota(a);
     const vsQuotaB = getVsQuota(b);
@@ -152,35 +152,27 @@ export const assignStablefordRanks = <T>(
       return vsQuotaB - vsQuotaA; // Higher vsQuota is better
     }
     
+    // If vsQuota is the same, sort by points for consistent ordering
     return getPoints(b) - getPoints(a); // Higher points is better
   });
 
-  // Assign ranks with proper tie handling
+  // Assign ranks based ONLY on vsQuota (ignore points for ranking)
   const rankedWithScores = sorted.map((entry, index, arr) => {
     const currentVsQuota = getVsQuota(entry);
-    const currentPoints = getPoints(entry);
     
-    // Count how many players are BETTER than this player
+    // Count how many players have BETTER vsQuota
     let position = 1;
     for (let i = 0; i < arr.length; i++) {
       const otherVsQuota = getVsQuota(arr[i]);
-      const otherPoints = getPoints(arr[i]);
       
-      // Only count players that are strictly better
+      // Only count players with strictly better vsQuota
       if (otherVsQuota > currentVsQuota) {
         position++;
-      } else if (otherVsQuota === currentVsQuota && otherPoints > currentPoints) {
-        position++;
-      } else if (otherVsQuota === currentVsQuota && otherPoints === currentPoints && i < index) {
-        // Same score but processed earlier - don't increment position
-        continue;
       }
     }
     
-    // Find all tied players (same vsQuota AND same points)
-    const tiedPlayers = arr.filter(e => 
-      getVsQuota(e) === currentVsQuota && getPoints(e) === currentPoints
-    );
+    // Find all tied players (SAME vsQuota only - points don't matter)
+    const tiedPlayers = arr.filter(e => getVsQuota(e) === currentVsQuota);
     const isTied = tiedPlayers.length > 1;
     
     return {
