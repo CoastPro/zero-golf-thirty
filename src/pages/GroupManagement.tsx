@@ -105,7 +105,6 @@ export default function GroupManagement() {
 
   const createGroups = async (count: number) => {
     try {
-      // Reload groups to get the absolute latest from database
       const { data: latestGroups, error: fetchError } = await supabase
         .from('groups')
         .select('number')
@@ -115,7 +114,6 @@ export default function GroupManagement() {
 
       if (fetchError) throw fetchError;
 
-      // Find the highest existing group number
       const highestGroupNumber = latestGroups && latestGroups.length > 0
         ? latestGroups[0].number
         : 0;
@@ -143,7 +141,6 @@ export default function GroupManagement() {
 
   const updateGroupNumber = async (groupId: string, newNumber: number) => {
     try {
-      // Check if the number is already taken
       const existingGroup = groups.find(g => g.number === newNumber && g.id !== groupId);
       if (existingGroup) {
         alert(`Group ${newNumber} already exists!`);
@@ -204,11 +201,13 @@ export default function GroupManagement() {
 
   const assignPlayer = async (groupId: string, playerId: string, position: number) => {
     try {
+      // Remove player from ANY group they're currently in
       await supabase
         .from('group_players')
         .delete()
         .eq('player_id', playerId);
 
+      // Add player to this group at this position
       const { error } = await supabase
         .from('group_players')
         .insert([{
@@ -228,6 +227,7 @@ export default function GroupManagement() {
 
   const removePlayer = async (groupId: string, playerId: string) => {
     try {
+      // Only remove from group_players junction table - player stays in tournament
       const { error } = await supabase
         .from('group_players')
         .delete()
@@ -261,7 +261,6 @@ export default function GroupManagement() {
       const group = groups.find(g => g.id === groupId);
       if (!group) return;
 
-      // Assign positions 1-2 to Cart 1, positions 3-4 to Cart 2
       for (let i = 0; i < group.players.length; i++) {
         const player = group.players[i];
         const cartNumber = i < 2 ? 1 : 2;
@@ -444,8 +443,6 @@ export default function GroupManagement() {
   );
 
   const unassignedPlayers = players.filter(p => !assignedPlayerIds.has(p.id));
-
-  // Count finished groups
   const finishedCount = groups.filter(g => g.round_finished).length;
 
   return (
@@ -643,7 +640,6 @@ export default function GroupManagement() {
                       </div>
                     )}
 
-                    {/* Status Badges */}
                     <div className="flex items-center gap-2">
                       {group.round_finished ? (
                         <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
@@ -706,7 +702,6 @@ export default function GroupManagement() {
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    {/* Unlock button - only show if group is finished */}
                     {group.round_finished && (
                       <button
                         onClick={() => unlockGroup(group.id, group.number)}
@@ -775,7 +770,6 @@ export default function GroupManagement() {
                     </div>
                   )}
 
-                  {/* Show finished timestamp if available */}
                   {group.round_finished && group.finished_at && (
                     <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                       <p className="text-sm text-green-800">
@@ -798,9 +792,14 @@ export default function GroupManagement() {
                   <div className="space-y-3">
                     {[1, 2, 3, 4].map(position => {
                       const assignedPlayer = group.players.find(p => p.position === position);
-                      const availablePlayers = assignedPlayer
-                        ? [assignedPlayer, ...unassignedPlayers]
-                        : unassignedPlayers;
+                      
+                      // FIXED: Show ALL tournament players in dropdown, not just unassigned
+                      // Filter out players already in THIS group at OTHER positions
+                      const availablePlayers = players.filter(p => {
+                        const playerInThisGroup = group.players.find(gp => gp.id === p.id);
+                        // Show if: it's the current player OR not in this group at a different position
+                        return p.id === assignedPlayer?.id || !playerInThisGroup;
+                      });
 
                       return (
                         <div key={position} className="flex items-center gap-3">
@@ -819,11 +818,18 @@ export default function GroupManagement() {
                             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                           >
                             <option value="">-- Select Player --</option>
-                            {availablePlayers.map(player => (
-                              <option key={player.id} value={player.id}>
-                                {player.name} (Flight {player.flight}, Quota {player.quota})
-                              </option>
-                            ))}
+                            {availablePlayers.map(player => {
+                              // Check if player is in a different group
+                              const playerGroup = groups.find(g => g.players.some(p => p.id === player.id));
+                              const isInDifferentGroup = playerGroup && playerGroup.id !== group.id;
+                              
+                              return (
+                                <option key={player.id} value={player.id}>
+                                  {player.name} (Flight {player.flight}, Quota {player.quota})
+                                  {isInDifferentGroup && ` [Currently in Group ${playerGroup.number}]`}
+                                </option>
+                              );
+                            })}
                           </select>
                           
                           {assignedPlayer && (
@@ -845,6 +851,7 @@ export default function GroupManagement() {
                               <button
                                 onClick={() => removePlayer(group.id, assignedPlayer.id)}
                                 className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Remove from group (keeps player in tournament)"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -893,7 +900,6 @@ export default function GroupManagement() {
         </>
       )}
 
-      {/* Print Modals */}
       {printScorecardGroupId && (
         <PrintableScorecard
           groupId={printScorecardGroupId}
