@@ -17,6 +17,9 @@ export default function ScoringInterface() {
   const navigate = useNavigate();
   const groupIdParam = searchParams.get('group');
   const isRestricted = !!groupIdParam;
+  
+  // Admin has unrestricted access (no group param means they came from admin dashboard)
+  const isAdmin = !isRestricted;
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [groups, setGroups] = useState<GroupWithPlayers[]>([]);
@@ -266,9 +269,12 @@ export default function ScoringInterface() {
   };
 
   // Check if scores can be edited
-  const canEdit = !selectedGroup?.round_finished && 
-                  !selectedGroup?.locked_by_admin && 
-                  !tournament?.finalized;
+  // ADMIN CAN ALWAYS EDIT - Scorers respect locks
+  const canEdit = isAdmin || (
+    !selectedGroup?.round_finished && 
+    !selectedGroup?.locked_by_admin && 
+    !tournament?.finalized
+  );
 
   // Check if all holes have been scored for all players
   const allHolesScored = selectedGroup?.players.every(player => {
@@ -298,8 +304,8 @@ export default function ScoringInterface() {
     );
   }
 
-  // If tournament is finalized, show message
-  if (tournament.finalized) {
+  // If tournament is finalized, ONLY BLOCK SCORERS (not admin)
+  if (tournament.finalized && !isAdmin) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12 text-center">
         <div className="bg-green-50 border-2 border-green-600 rounded-lg p-8">
@@ -319,8 +325,8 @@ export default function ScoringInterface() {
     );
   }
 
-  // If round is finished, show message
-  if (selectedGroup.round_finished) {
+  // If round is finished, ONLY BLOCK SCORERS (not admin)
+  if (selectedGroup.round_finished && !isAdmin) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12 text-center">
         <div className="bg-green-50 border-2 border-green-600 rounded-lg p-8">
@@ -355,6 +361,15 @@ export default function ScoringInterface() {
       <div className="mb-2">
         <h2 className="text-lg font-bold text-gray-900 mb-1">{tournament.name}</h2>
         
+        {/* Admin Notice - Show if admin is viewing locked content */}
+        {isAdmin && (selectedGroup.round_finished || tournament.finalized) && (
+          <div className="mb-2 bg-blue-50 border border-blue-200 rounded p-2">
+            <p className="text-xs text-blue-800">
+              🔓 <strong>Admin View:</strong> This group is locked for scorers, but you can still edit.
+            </p>
+          </div>
+        )}
+        
         {/* Group Selection - Only show if NOT restricted */}
         {!isRestricted && groups.length > 1 && (
           <div className="mb-2">
@@ -371,7 +386,7 @@ export default function ScoringInterface() {
             >
               {groups.map(group => (
                 <option key={group.id} value={group.id}>
-                  Group {group.number} ({group.players.length} players)
+                  Group {group.number} ({group.players.length} players) {group.round_finished ? '✅' : ''}
                 </option>
               ))}
             </select>
@@ -496,8 +511,8 @@ export default function ScoringInterface() {
         })}
       </div>
 
-      {/* Finish Round Button - Show after all holes scored */}
-      {allHolesScored && canEdit && (
+      {/* Finish Round Button - ONLY SHOW FOR SCORERS (not admin) */}
+      {!isAdmin && allHolesScored && canEdit && (
         <div className="mt-4">
           <button
             onClick={handleFinishRound}
