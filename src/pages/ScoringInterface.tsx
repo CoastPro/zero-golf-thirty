@@ -351,10 +351,10 @@ export default function ScoringInterface() {
 
   const holePar = tournament.course_par[currentHole - 1];
 
-  // Get visibility settings from tournament
-  const showFlight = tournament.player_display_settings?.show_flight ?? true;
-  const showHandicap = tournament.player_display_settings?.show_handicap ?? true;
-  const showQuota = tournament.player_display_settings?.show_quota ?? true;
+// Get visibility settings from tournament
+const showFlight = true; // Always show flight
+const showHandicap = tournament.show_handicaps ?? true;
+const showQuota = tournament.show_quotas ?? true;
 
   return (
     <div className="max-w-2xl mx-auto px-2 py-2">
