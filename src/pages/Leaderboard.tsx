@@ -119,12 +119,17 @@ export default function Leaderboard() {
           {tournament.course_name && <p className="text-sm text-gray-600">{tournament.course_name}</p>}
         </div>
         <div className="flex gap-2">
-          <Link to={scoreLink} className="flex items-center gap-2 px-3 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg text-sm transition-colors">
-            <Edit className="w-4 h-4" />
-            Score
-          </Link>
-          
-          {/* Menu Button */}
+  {groupIdParam && (
+    <Link 
+      to={scoreLink} 
+      className="flex items-center gap-2 px-3 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg text-sm transition-colors"
+    >
+      <Edit className="w-4 h-4" />
+      Score
+    </Link>
+  )}
+  
+  {/* Menu Button */}
           <div className="relative">
             <button 
               onClick={() => setShowMenu(!showMenu)}
