@@ -133,7 +133,7 @@ export default function ScoringInterface() {
 
   const loadScoresForGroup = async (groupId: string) => {
     const group = groups.find(g => g.id === groupId);
-    if (!group) return;
+    if (!group || !tournament) return;
 
     try {
       const { data, error } = await supabase
@@ -148,6 +148,7 @@ export default function ScoringInterface() {
         scoresMap[player.id] = {};
         for (let hole = 1; hole <= 18; hole++) {
           const score = data?.find(s => s.player_id === player.id && s.hole === hole);
+          // Only load actual saved scores - don't pre-fill with par
           scoresMap[player.id][hole] = score?.score || null;
         }
       });
@@ -235,17 +236,32 @@ export default function ScoringInterface() {
   };
 
   const updateScore = (playerId: string, delta: number) => {
-    if (!canEdit) return;
+    if (!canEdit || !tournament) return;
 
     setScores(prev => {
-      const currentScore = prev[playerId]?.[currentHole] || 0;
-      const newScore = Math.max(1, Math.min(10, currentScore + delta));
+      const currentScore = prev[playerId]?.[currentHole];
+      const holePar = tournament.course_par[currentHole - 1];
+      
+      // If no score yet, use par as starting point
+      const baseScore = currentScore !== null && currentScore !== undefined ? currentScore : holePar;
+      
+      let newScore = baseScore + delta;
+      
+      // Allow going from 1 down to null (blank)
+      if (newScore < 1) {
+        newScore = 0; // We'll treat 0 as null
+      }
+      
+      // Cap at 10
+      if (newScore > 10) {
+        newScore = 10;
+      }
       
       return {
         ...prev,
         [playerId]: {
           ...prev[playerId],
-          [currentHole]: newScore
+          [currentHole]: newScore === 0 ? null : newScore
         }
       };
     });
@@ -351,10 +367,10 @@ export default function ScoringInterface() {
 
   const holePar = tournament.course_par[currentHole - 1];
 
-// Get visibility settings from tournament
-const showFlight = true; // Always show flight
-const showHandicap = tournament.show_handicaps ?? true;
-const showQuota = tournament.show_quotas ?? true;
+  // Get visibility settings from tournament
+  const showFlight = true; // Always show flight
+  const showHandicap = tournament.show_handicaps ?? true;
+  const showQuota = tournament.show_quotas ?? true;
 
   return (
     <div className="max-w-2xl mx-auto px-2 py-2">
@@ -417,15 +433,15 @@ const showQuota = tournament.show_quotas ?? true;
           </div>
         )}
 
-        {/* Hole Navigation */}
+        {/* Hole Navigation - GREEN ARROWS! */}
         <div className="bg-white rounded-lg shadow p-2 mb-2">
           <div className="flex items-center justify-between">
             <button
               onClick={previousHole}
               disabled={currentHole === 1}
-              className="p-1.5 bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1.5 bg-green-500 hover:bg-green-600 text-white rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-6 h-6" />
             </button>
             
             <div className="flex-1 mx-2">
@@ -444,9 +460,9 @@ const showQuota = tournament.show_quotas ?? true;
 
             <button
               onClick={nextHole}
-              className="p-1.5 bg-gray-100 hover:bg-gray-200 rounded"
+              className="p-1.5 bg-green-500 hover:bg-green-600 text-white rounded transition-colors"
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-6 h-6" />
             </button>
           </div>
         </div>
@@ -455,7 +471,10 @@ const showQuota = tournament.show_quotas ?? true;
       {/* Player Scoring Cards */}
       <div className="space-y-2">
         {selectedGroup.players.map(player => {
-          const playerScore = scores[player.id]?.[currentHole] || 0;
+          const savedScore = scores[player.id]?.[currentHole];
+          // Show par as placeholder if no score saved yet
+          const displayScore = savedScore !== null && savedScore !== undefined ? savedScore : holePar;
+          const isPlaceholder = savedScore === null || savedScore === undefined;
           
           // Build info parts array based on visibility settings
           const infoParts = [];
@@ -478,21 +497,21 @@ const showQuota = tournament.show_quotas ?? true;
               <div className="flex items-center justify-between">
                 <button
                   onClick={() => updateScore(player.id, -1)}
-                  disabled={playerScore <= 1 || !canEdit}
+                  disabled={!canEdit}
                   className="p-2 bg-red-500 hover:bg-red-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Minus className="w-6 h-6" />
                 </button>
 
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-gray-900 leading-none">
-                    {playerScore || '-'}
+                  <div className={`text-3xl font-bold leading-none ${isPlaceholder ? 'text-gray-400' : 'text-gray-900'}`}>
+                    {displayScore}
                   </div>
                   <div className="text-xs text-gray-600 mt-0.5">
-                    {playerScore > 0 && (
+                    {displayScore > 0 && (
                       <>
-                        {playerScore - holePar > 0 ? '+' : ''}
-                        {playerScore - holePar !== 0 ? playerScore - holePar : 'Par'}
+                        {displayScore - holePar > 0 ? '+' : ''}
+                        {displayScore - holePar !== 0 ? displayScore - holePar : 'Par'}
                       </>
                     )}
                   </div>
@@ -500,7 +519,7 @@ const showQuota = tournament.show_quotas ?? true;
 
                 <button
                   onClick={() => updateScore(player.id, 1)}
-                  disabled={playerScore >= 10 || !canEdit}
+                  disabled={displayScore >= 10 || !canEdit}
                   className="p-2 bg-green-500 hover:bg-green-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-6 h-6" />
