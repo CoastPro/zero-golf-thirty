@@ -242,10 +242,19 @@ export default function ScoringInterface() {
       const currentScore = prev[playerId]?.[currentHole];
       const holePar = tournament.course_par[currentHole - 1];
       
-      // If no score yet, use par as starting point
-      const baseScore = currentScore !== null && currentScore !== undefined ? currentScore : holePar;
+      // If no score yet (null), first click goes to PAR (not par+delta!)
+      if (currentScore === null || currentScore === undefined) {
+        return {
+          ...prev,
+          [playerId]: {
+            ...prev[playerId],
+            [currentHole]: holePar
+          }
+        };
+      }
       
-      let newScore = baseScore + delta;
+      // After that, normal +/- behavior
+      let newScore = currentScore + delta;
       
       // Allow going from 1 down to null (blank)
       if (newScore < 1) {
@@ -472,8 +481,8 @@ export default function ScoringInterface() {
       <div className="space-y-2">
         {selectedGroup.players.map(player => {
           const savedScore = scores[player.id]?.[currentHole];
-          // Show par as placeholder if no score saved yet
-          const displayScore = savedScore !== null && savedScore !== undefined ? savedScore : holePar;
+          // Show blank/dash if no score saved yet
+          const displayScore = savedScore !== null && savedScore !== undefined ? savedScore : null;
           const isPlaceholder = savedScore === null || savedScore === undefined;
           
           // Build info parts array based on visibility settings
@@ -505,10 +514,10 @@ export default function ScoringInterface() {
 
                 <div className="text-center">
                   <div className={`text-3xl font-bold leading-none ${isPlaceholder ? 'text-gray-400' : 'text-gray-900'}`}>
-                    {displayScore}
+                    {displayScore !== null ? displayScore : '-'}
                   </div>
                   <div className="text-xs text-gray-600 mt-0.5">
-                    {displayScore > 0 && (
+                    {displayScore !== null && displayScore > 0 && (
                       <>
                         {displayScore - holePar > 0 ? '+' : ''}
                         {displayScore - holePar !== 0 ? displayScore - holePar : 'Par'}
@@ -519,7 +528,7 @@ export default function ScoringInterface() {
 
                 <button
                   onClick={() => updateScore(player.id, 1)}
-                  disabled={displayScore >= 10 || !canEdit}
+                  disabled={!canEdit || (displayScore !== null && displayScore >= 10)}
                   className="p-2 bg-green-500 hover:bg-green-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-6 h-6" />
