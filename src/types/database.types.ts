@@ -49,10 +49,13 @@ export interface Tournament {
   created_at: string;
   updated_at: string;
   
-  // ✅ NEW FIELDS FOR FINALIZE FEATURE
+// ✅ NEW FIELDS FOR FINALIZE FEATURE
   finalized?: boolean;
   finalized_at?: string | null;
   finalized_by?: string | null;
+
+  // ✅ NEW FIELD FOR TOURNAMENT QR CODE
+  tournament_qr_code?: string | null;
 }
 
 export interface StablefordPoints {
