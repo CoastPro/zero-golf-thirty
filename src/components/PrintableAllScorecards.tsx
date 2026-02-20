@@ -143,82 +143,82 @@ const PrintableAllScorecards: React.FC<Props> = ({ tournamentId, onClose }) => {
 
     return (
       <div className="scorecard-page bg-white">
-        <div className="p-6 print:p-3">
+        <div className="p-4 print:p-2">
 
           {/* Header */}
-          <div className="flex items-start justify-between mb-3 pb-3 border-b-2 border-green-600">
+          <div className="flex items-start justify-between mb-2 pb-2 border-b-2 border-green-600">
             <div className="flex-1">
-              <h1 className="text-lg font-bold text-gray-900 print:text-base">{tournament.name}</h1>
-              <p className="text-sm text-gray-700 print:text-xs">{tournament.course_name}</p>
+              <h1 className="text-base font-bold text-gray-900 print:text-sm">{tournament.name}</h1>
+              <p className="text-xs text-gray-700">{tournament.course_name}</p>
             </div>
             <div className="text-center flex-1">
               {isShotgun ? (
-                <div className="text-base font-semibold text-gray-900 print:text-sm">
+                <div className="text-sm font-semibold text-gray-900">
                   Hole {group.starting_hole}
                   {group.starting_position && ` (Tee ${group.starting_position})`}
                 </div>
               ) : (
-                <div className="text-base font-semibold text-gray-900 print:text-sm">
+                <div className="text-sm font-semibold text-gray-900">
                   {group.tee_time}
                 </div>
               )}
             </div>
             <div className="flex items-center justify-end flex-1">
               {tournament.logo_url && (
-                <img src={tournament.logo_url} alt="Tournament Logo" className="h-14 print:h-12" />
+                <img src={tournament.logo_url} alt="Tournament Logo" className="h-10 print:h-8" />
               )}
             </div>
           </div>
 
           {/* Scorecard Table */}
-          <div className="mb-3">
-            <table className="w-full border-collapse border-2 border-gray-800 text-xs print:text-[10px]">
+          <div className="mb-2">
+            <table className="w-full border-collapse border-2 border-gray-800 text-xs print:text-[9px]">
               <thead>
                 <tr className="bg-green-600 text-white">
-                  <th className="border border-gray-800 px-1 py-1 text-left" style={{width: '80px'}}>Player</th>
-                  <th className="border border-gray-800 px-1 py-1 text-center" style={{width: '24px'}}>
+                  <th className="border border-gray-800 px-1 py-0.5 text-left" style={{width: '80px'}}>Player</th>
+                  <th className="border border-gray-800 px-1 py-0.5 text-center" style={{width: '22px'}}>
                     {showQuota ? 'Q' : 'H'}
                   </th>
                   {[1,2,3,4,5,6,7,8,9].map(hole => (
-                    <th key={hole} className="border border-gray-800 px-1 py-1 text-center font-bold" style={{width: '28px'}}>{hole}</th>
+                    <th key={hole} className="border border-gray-800 px-0.5 py-0.5 text-center font-bold" style={{width: '26px'}}>{hole}</th>
                   ))}
-                  <th className="border border-gray-800 px-1 py-1 text-center font-bold bg-green-700" style={{width: '32px'}}>OUT</th>
+                  <th className="border border-gray-800 px-0.5 py-0.5 text-center font-bold bg-green-700" style={{width: '30px'}}>OUT</th>
                   {[10,11,12,13,14,15,16,17,18].map(hole => (
-                    <th key={hole} className="border border-gray-800 px-1 py-1 text-center font-bold" style={{width: '28px'}}>{hole}</th>
+                    <th key={hole} className="border border-gray-800 px-0.5 py-0.5 text-center font-bold" style={{width: '26px'}}>{hole}</th>
                   ))}
-                  <th className="border border-gray-800 px-1 py-1 text-center font-bold bg-green-700" style={{width: '32px'}}>IN</th>
-                  <th className="border border-gray-800 px-1 py-1 text-center font-bold bg-green-700" style={{width: '36px'}}>TOT</th>
+                  <th className="border border-gray-800 px-0.5 py-0.5 text-center font-bold bg-green-700" style={{width: '30px'}}>IN</th>
+                  <th className="border border-gray-800 px-0.5 py-0.5 text-center font-bold bg-green-700" style={{width: '34px'}}>TOT</th>
                 </tr>
                 <tr className="bg-yellow-100">
-                  <td className="border border-gray-800 px-1 py-1 font-bold">PAR</td>
+                  <td className="border border-gray-800 px-1 py-0.5 font-bold text-xs">PAR</td>
                   <td className="border border-gray-800"></td>
                   {frontNinePar.map((par, i) => (
-                    <td key={i} className="border border-gray-800 px-1 py-1 text-center font-bold">{par}</td>
+                    <td key={i} className="border border-gray-800 px-0.5 py-0.5 text-center font-bold">{par}</td>
                   ))}
-                  <td className="border border-gray-800 px-1 py-1 text-center font-bold bg-yellow-200">{frontTotal}</td>
+                  <td className="border border-gray-800 px-0.5 py-0.5 text-center font-bold bg-yellow-200">{frontTotal}</td>
                   {backNinePar.map((par, i) => (
-                    <td key={i} className="border border-gray-800 px-1 py-1 text-center font-bold">{par}</td>
+                    <td key={i} className="border border-gray-800 px-0.5 py-0.5 text-center font-bold">{par}</td>
                   ))}
-                  <td className="border border-gray-800 px-1 py-1 text-center font-bold bg-yellow-200">{backTotal}</td>
-                  <td className="border border-gray-800 px-1 py-1 text-center font-bold bg-yellow-300">{totalPar}</td>
+                  <td className="border border-gray-800 px-0.5 py-0.5 text-center font-bold bg-yellow-200">{backTotal}</td>
+                  <td className="border border-gray-800 px-0.5 py-0.5 text-center font-bold bg-yellow-300">{totalPar}</td>
                 </tr>
               </thead>
               <tbody>
                 {group.players.map(player => (
                   <tr key={player.id}>
-                    <td className="border border-gray-800 px-1 py-1 font-semibold truncate text-xs print:text-[10px]">{player.name}</td>
-                    <td className="border border-gray-800 px-1 py-1 text-center text-xs">
+                    <td className="border border-gray-800 px-1 py-0.5 font-semibold truncate" style={{maxWidth: '80px'}}>{player.name}</td>
+                    <td className="border border-gray-800 px-0.5 py-0.5 text-center">
                       {showQuota ? player.quota : player.handicap}
                     </td>
                     {[...Array(9)].map((_, i) => (
-                      <td key={i} className="border border-gray-800 px-0 py-1" style={{height: '32px'}}></td>
+                      <td key={i} className="border border-gray-800" style={{height: '28px'}}></td>
                     ))}
-                    <td className="border border-gray-800 px-1 py-1 bg-gray-100"></td>
+                    <td className="border border-gray-800 bg-gray-100"></td>
                     {[...Array(9)].map((_, i) => (
-                      <td key={`back-${i}`} className="border border-gray-800 px-0 py-1" style={{height: '32px'}}></td>
+                      <td key={`back-${i}`} className="border border-gray-800" style={{height: '28px'}}></td>
                     ))}
-                    <td className="border border-gray-800 px-1 py-1 bg-gray-100"></td>
-                    <td className="border border-gray-800 px-1 py-1 bg-gray-200"></td>
+                    <td className="border border-gray-800 bg-gray-100"></td>
+                    <td className="border border-gray-800 bg-gray-200"></td>
                   </tr>
                 ))}
               </tbody>
@@ -227,37 +227,37 @@ const PrintableAllScorecards: React.FC<Props> = ({ tournamentId, onClose }) => {
 
           {/* Instructions */}
           {tournament.player_instructions && (
-            <div className="mb-3 text-center">
-              <p className="text-xs font-medium text-gray-700 print:text-[10px]">
+            <div className="mb-2 text-center">
+              <p className="text-xs text-gray-700">
                 {tournament.player_instructions}
               </p>
             </div>
           )}
 
           {/* Bottom: Sponsors + QR */}
-          <div className="flex items-center justify-between gap-6">
-            <div className="flex-1 flex justify-center items-center" style={{height: '100px'}}>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1 flex justify-center items-center" style={{height: '70px'}}>
               {tournament.sponsor_logo_url ? (
-                <img src={tournament.sponsor_logo_url} alt="Sponsor" className="max-h-20 max-w-full object-contain" />
+                <img src={tournament.sponsor_logo_url} alt="Sponsor" className="max-h-16 max-w-full object-contain" />
               ) : (
                 <div className="text-xs text-gray-400">Sponsor Logo</div>
               )}
             </div>
-            <div className="text-center flex flex-col items-center justify-center" style={{width: '140px'}}>
+            <div className="text-center flex flex-col items-center justify-center" style={{width: '110px'}}>
               {tournament.tournament_qr_code ? (
                 <>
-                  <p className="text-xs font-semibold mb-1">Scan to Score</p>
-                  <img src={tournament.tournament_qr_code} alt="Scoring QR Code" className="w-24 h-24" />
+                  <p className="text-xs font-semibold mb-0.5">Scan to Score</p>
+                  <img src={tournament.tournament_qr_code} alt="Scoring QR Code" className="w-16 h-16" />
                 </>
               ) : (
-                <div className="w-24 h-24 border-2 border-dashed border-gray-300 flex items-center justify-center">
-                  <span className="text-xs text-gray-400 text-center">Generate QR Code first</span>
+                <div className="w-16 h-16 border-2 border-dashed border-gray-300 flex items-center justify-center">
+                  <span className="text-xs text-gray-400 text-center">No QR Code</span>
                 </div>
               )}
             </div>
-            <div className="flex-1 flex justify-center items-center" style={{height: '100px'}}>
+            <div className="flex-1 flex justify-center items-center" style={{height: '70px'}}>
               {tournament.sponsor_logo_2_url ? (
-                <img src={tournament.sponsor_logo_2_url} alt="Sponsor" className="max-h-20 max-w-full object-contain" />
+                <img src={tournament.sponsor_logo_2_url} alt="Sponsor" className="max-h-16 max-w-full object-contain" />
               ) : (
                 <div className="text-xs text-gray-400">Sponsor Logo</div>
               )}
@@ -274,7 +274,7 @@ const PrintableAllScorecards: React.FC<Props> = ({ tournamentId, onClose }) => {
 
       {/* Tip Banner */}
       <div className="print:hidden absolute top-4 left-4 bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded-lg text-sm z-50">
-        💡 When dialog opens, set Destination to <strong>"Save as PDF"</strong>
+        💡 When dialog opens, set Destination to <strong>"Save as PDF"</strong> · Orientation: <strong>Portrait</strong> · Margins: <strong>None</strong>
       </div>
 
       {/* Screen Controls */}
@@ -289,7 +289,7 @@ const PrintableAllScorecards: React.FC<Props> = ({ tournamentId, onClose }) => {
           <span className="text-sm font-medium">Show {showQuota ? 'Quota' : 'Handicap'}</span>
         </label>
         <div className="bg-white px-4 py-2 rounded-lg shadow text-sm font-medium text-gray-700">
-          {groups.length} Scorecards
+          {groups.length} Scorecards · {Math.ceil(groups.length / 2)} Pages
         </div>
         <button
           onClick={handleSaveAsPDF}
@@ -306,13 +306,13 @@ const PrintableAllScorecards: React.FC<Props> = ({ tournamentId, onClose }) => {
         </button>
       </div>
 
-      {/* All Scorecards */}
-      <div className="bg-gray-100 w-full max-w-7xl max-h-[90vh] overflow-auto print:max-h-none print:overflow-visible print:bg-white">
+      {/* All Scorecards - 2 per page preview on screen */}
+      <div className="bg-gray-100 w-full max-w-4xl max-h-[90vh] overflow-auto print:max-h-none print:overflow-visible print:bg-white">
         {groups.map((group, index) => (
           <div key={group.id}>
             <ScorecardPage group={group} />
             {index < groups.length - 1 && (
-              <div className="print:hidden border-t-4 border-dashed border-gray-400 my-2 mx-6" />
+              <div className="print:hidden border-t-4 border-dashed border-gray-400 my-1 mx-6" />
             )}
           </div>
         ))}
@@ -320,16 +320,37 @@ const PrintableAllScorecards: React.FC<Props> = ({ tournamentId, onClose }) => {
 
       <style>{`
         @media print {
-          body * { visibility: hidden; }
-          .scorecard-page, .scorecard-page * { visibility: visible; }
-          .print\\:hidden { display: none !important; }
-          .scorecard-page {
-            page-break-after: always;
-            position: relative;
-            width: 100%;
+          body * {
+            visibility: hidden;
           }
-          @page { size: letter landscape; margin: 0.25in 0.5in; }
-          body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+          .scorecard-page, .scorecard-page * {
+            visibility: visible;
+          }
+          .print\\:hidden {
+            display: none !important;
+          }
+          .scorecard-page {
+            page-break-inside: avoid;
+            break-inside: avoid;
+            height: 49%;
+            overflow: hidden;
+            box-sizing: border-box;
+            position: relative;
+          }
+          .scorecard-page:nth-child(even) {
+            page-break-after: always;
+            break-after: page;
+          }
+          @page {
+            size: letter portrait;
+            margin: 0.2in 0.3in;
+          }
+          body {
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+            margin: 0;
+            padding: 0;
+          }
         }
       `}</style>
     </div>
