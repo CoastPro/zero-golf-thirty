@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Users, ArrowRight, Trash2, Clock, Target, QrCode, Download, Link2, Check, Printer, FileText, Edit2, X, Lock, Unlock } from 'lucide-react';
+import { Plus, Users, ArrowRight, Trash2, Clock, Target, QrCode, Link2, Check, Printer, FileText, Edit2, X, Lock, Unlock } from 'lucide-react';
 import QRCode from 'qrcode';
 import { supabase } from '../lib/supabase';
 import { Player, Group, Tournament } from '../types/database.types';
 import PrintableScorecard from '../components/PrintableScorecard';
 import PrintableCartPlacard from '../components/PrintableCartPlacard';
+import PrintableAllScorecards from '../components/PrintableAllScorecards';
 
 interface GroupWithPlayers extends Group {
   players: (Player & { position: number; cart_number: number | null })[];
@@ -90,7 +91,7 @@ export default function GroupManagement() {
         });
 
         setGroups(groupsWithPlayers);
-        
+
         if (groupsData.some(g => g.starting_position)) {
           setUseMultipleTees(true);
         }
@@ -184,7 +185,7 @@ export default function GroupManagement() {
     try {
       const { error } = await supabase
         .from('groups')
-        .update({ 
+        .update({
           round_finished: false,
           finished_at: null,
           locked_by_admin: false
@@ -201,13 +202,11 @@ export default function GroupManagement() {
 
   const assignPlayer = async (groupId: string, playerId: string, position: number) => {
     try {
-      // Remove player from ANY group they're currently in
       await supabase
         .from('group_players')
         .delete()
         .eq('player_id', playerId);
 
-      // Add player to this group at this position
       const { error } = await supabase
         .from('group_players')
         .insert([{
@@ -227,7 +226,6 @@ export default function GroupManagement() {
 
   const removePlayer = async (groupId: string, playerId: string) => {
     try {
-      // Only remove from group_players junction table - player stays in tournament
       const { error } = await supabase
         .from('group_players')
         .delete()
@@ -264,7 +262,7 @@ export default function GroupManagement() {
       for (let i = 0; i < group.players.length; i++) {
         const player = group.players[i];
         const cartNumber = i < 2 ? 1 : 2;
-        
+
         await supabase
           .from('group_players')
           .update({ cart_number: cartNumber })
@@ -323,11 +321,12 @@ export default function GroupManagement() {
     }
   };
 
-  const generateQRCode = async (groupId: string, groupNumber: number) => {
-    setGeneratingQR(groupId);
+  const generateQRCode = async () => {
+    if (!tournament) return;
+    setGeneratingQR('tournament');
     try {
-      const scoringUrl = `${window.location.origin}/tournament/${id}/score?group=${groupId}`;
-      const qrDataUrl = await QRCode.toDataURL(scoringUrl, {
+      const loginUrl = `${window.location.origin}/tournament/${tournament.slug}/login`;
+      const qrDataUrl = await QRCode.toDataURL(loginUrl, {
         width: 500,
         margin: 2,
         color: {
@@ -337,13 +336,14 @@ export default function GroupManagement() {
       });
 
       const { error } = await supabase
-        .from('groups')
-        .update({ qr_code: qrDataUrl })
-        .eq('id', groupId);
+        .from('tournaments')
+        .update({ tournament_qr_code: qrDataUrl })
+        .eq('id', id);
 
       if (error) throw error;
-      
+
       loadData();
+      alert('QR Code generated successfully!');
     } catch (error) {
       console.error('Error generating QR code:', error);
       alert('Failed to generate QR code');
@@ -352,34 +352,18 @@ export default function GroupManagement() {
     }
   };
 
-  const downloadQRCode = (qrCode: string, groupNumber: number) => {
-    const link = document.createElement('a');
-    link.href = qrCode;
-    link.download = `group-${groupNumber}-qr.png`;
-    link.click();
-  };
+  const copyLoginLink = async () => {
+    if (!tournament) return;
+    const loginUrl = `${window.location.origin}/tournament/${tournament.slug}/login`;
 
-  const copyGroupLink = async (groupId: string) => {
-    const scoringUrl = `${window.location.origin}/tournament/${id}/score?group=${groupId}`;
-    
     try {
-      await navigator.clipboard.writeText(scoringUrl);
-      setCopiedGroupId(groupId);
+      await navigator.clipboard.writeText(loginUrl);
+      setCopiedGroupId('tournament');
       setTimeout(() => setCopiedGroupId(null), 2000);
     } catch (error) {
       console.error('Error copying link:', error);
       alert('Failed to copy link to clipboard');
     }
-  };
-
-  const generateAllQRCodes = async () => {
-    if (!confirm('Generate QR codes for all groups?')) return;
-    
-    for (const group of groups) {
-      await generateQRCode(group.id, group.number);
-    }
-    
-    alert('All QR codes generated!');
   };
 
   const autoAssignShotgun = async () => {
@@ -392,9 +376,9 @@ export default function GroupManagement() {
 
         await supabase
           .from('groups')
-          .update({ 
+          .update({
             starting_hole: hole,
-            starting_position: position 
+            starting_position: position
           })
           .eq('id', groups[i].id);
       }
@@ -409,7 +393,7 @@ export default function GroupManagement() {
   const autoAssignTeeTimes = async () => {
     try {
       const [hours, minutes] = startTime.split(':').map(Number);
-      
+
       for (let i = 0; i < groups.length; i++) {
         const totalMinutes = hours * 60 + minutes + (i * intervalMinutes);
         const newHours = Math.floor(totalMinutes / 60) % 24;
@@ -659,7 +643,7 @@ export default function GroupManagement() {
                         </span>
                       )}
                     </div>
-                    
+
                     {startType === 'shotgun' ? (
                       <div className="flex items-center gap-2">
                         <label className="text-sm">Hole:</label>
@@ -700,7 +684,7 @@ export default function GroupManagement() {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     {group.round_finished && (
                       <button
@@ -726,34 +710,16 @@ export default function GroupManagement() {
                       <FileText className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => copyGroupLink(group.id)}
+                      onClick={copyLoginLink}
                       className="p-2 bg-purple-600 hover:bg-purple-700 rounded transition-colors"
-                      title="Copy Scoring Link"
+                      title="Copy Login Link"
                     >
-                      {copiedGroupId === group.id ? (
+                      {copiedGroupId === 'tournament' ? (
                         <Check className="w-4 h-4" />
                       ) : (
                         <Link2 className="w-4 h-4" />
                       )}
                     </button>
-                    {group.qr_code ? (
-                      <button
-                        onClick={() => downloadQRCode(group.qr_code!, group.number)}
-                        className="p-2 bg-blue-600 hover:bg-blue-700 rounded transition-colors"
-                        title="Download QR Code"
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => generateQRCode(group.id, group.number)}
-                        disabled={generatingQR === group.id}
-                        className="p-2 bg-blue-600 hover:bg-blue-700 rounded transition-colors disabled:opacity-50"
-                        title="Generate QR Code"
-                      >
-                        <QrCode className="w-4 h-4" />
-                      </button>
-                    )}
                     <button
                       onClick={() => deleteGroup(group.id, group.number)}
                       className="p-2 hover:bg-green-700 rounded transition-colors"
@@ -762,14 +728,8 @@ export default function GroupManagement() {
                     </button>
                   </div>
                 </div>
-                
-                <div className="p-6">
-                  {group.qr_code && (
-                    <div className="mb-4 flex justify-center">
-                      <img src={group.qr_code} alt={`QR Code for Group ${group.number}`} className="w-40 h-40 border-2 border-gray-200 rounded" />
-                    </div>
-                  )}
 
+                <div className="p-6">
                   {group.round_finished && group.finished_at && (
                     <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                       <p className="text-sm text-green-800">
@@ -777,7 +737,7 @@ export default function GroupManagement() {
                       </p>
                     </div>
                   )}
-                  
+
                   {group.players.length > 0 && (
                     <div className="mb-4 flex justify-end">
                       <button
@@ -788,16 +748,13 @@ export default function GroupManagement() {
                       </button>
                     </div>
                   )}
-                  
+
                   <div className="space-y-3">
                     {[1, 2, 3, 4].map(position => {
                       const assignedPlayer = group.players.find(p => p.position === position);
-                      
-                      // FIXED: Show ALL tournament players in dropdown, not just unassigned
-                      // Filter out players already in THIS group at OTHER positions
+
                       const availablePlayers = players.filter(p => {
                         const playerInThisGroup = group.players.find(gp => gp.id === p.id);
-                        // Show if: it's the current player OR not in this group at a different position
                         return p.id === assignedPlayer?.id || !playerInThisGroup;
                       });
 
@@ -819,10 +776,9 @@ export default function GroupManagement() {
                           >
                             <option value="">-- Select Player --</option>
                             {availablePlayers.map(player => {
-                              // Check if player is in a different group
                               const playerGroup = groups.find(g => g.players.some(p => p.id === player.id));
                               const isInDifferentGroup = playerGroup && playerGroup.id !== group.id;
-                              
+
                               return (
                                 <option key={player.id} value={player.id}>
                                   {player.name} (Flight {player.flight}, Quota {player.quota})
@@ -831,14 +787,14 @@ export default function GroupManagement() {
                               );
                             })}
                           </select>
-                          
+
                           {assignedPlayer && (
                             <>
                               <select
                                 value={assignedPlayer.cart_number || ''}
                                 onChange={(e) => updateCartNumber(
-                                  group.id, 
-                                  assignedPlayer.id, 
+                                  group.id,
+                                  assignedPlayer.id,
                                   e.target.value ? parseInt(e.target.value) : null
                                 )}
                                 className="w-28 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
@@ -847,11 +803,11 @@ export default function GroupManagement() {
                                 <option value="1">Cart 1</option>
                                 <option value="2">Cart 2</option>
                               </select>
-                              
+
                               <button
                                 onClick={() => removePlayer(group.id, assignedPlayer.id)}
                                 className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                title="Remove from group (keeps player in tournament)"
+                                title="Remove from group"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -866,8 +822,8 @@ export default function GroupManagement() {
             ))}
           </div>
 
-          <div className="mt-6 flex justify-between items-center">
-            <div className="flex gap-2">
+          <div className="mt-6 flex flex-wrap justify-between items-center gap-3">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={addSingleGroup}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
@@ -875,16 +831,38 @@ export default function GroupManagement() {
                 <Plus className="w-5 h-5" />
                 Add A Group
               </button>
-              
-              {groups.length > 0 && (
-                <button
-                  onClick={generateAllQRCodes}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                >
-                  <QrCode className="w-5 h-5" />
-                  Generate All QR Codes
-                </button>
-              )}
+
+              <button
+                onClick={generateQRCode}
+                disabled={generatingQR === 'tournament'}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
+                <QrCode className="w-5 h-5" />
+                {generatingQR === 'tournament'
+                  ? 'Generating...'
+                  : tournament?.tournament_qr_code
+                  ? 'Regenerate QR Code'
+                  : 'Generate QR Code'}
+              </button>
+
+              <button
+                onClick={copyLoginLink}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+              >
+                {copiedGroupId === 'tournament' ? (
+                  <><Check className="w-5 h-5" />Copied!</>
+                ) : (
+                  <><Link2 className="w-5 h-5" />Copy Login Link</>
+                )}
+              </button>
+
+              <button
+                onClick={() => setPrintScorecardGroupId('all')}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+              >
+                <Printer className="w-5 h-5" />
+                Save All Scorecards as PDF
+              </button>
             </div>
 
             {unassignedPlayers.length === 0 && groups.length > 0 && (
@@ -900,9 +878,16 @@ export default function GroupManagement() {
         </>
       )}
 
-      {printScorecardGroupId && (
+      {printScorecardGroupId && printScorecardGroupId !== 'all' && (
         <PrintableScorecard
           groupId={printScorecardGroupId}
+          onClose={() => setPrintScorecardGroupId(null)}
+        />
+      )}
+
+      {printScorecardGroupId === 'all' && (
+        <PrintableAllScorecards
+          tournamentId={id!}
           onClose={() => setPrintScorecardGroupId(null)}
         />
       )}

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { X } from 'lucide-react';
 
@@ -20,6 +19,7 @@ interface Group {
 }
 
 interface Tournament {
+  id: string;
   name: string;
   slug: string;
   logo_url: string | null;
@@ -31,21 +31,20 @@ interface Tournament {
   tournament_qr_code: string | null;
 }
 
-interface PrintableScorecardProps {
-  groupId: string;
+interface Props {
+  tournamentId: string;
   onClose: () => void;
 }
 
-const PrintableScorecard: React.FC<PrintableScorecardProps> = ({ groupId, onClose }) => {
-  const { id: tournamentId } = useParams();
-  const [group, setGroup] = useState<Group | null>(null);
+const PrintableAllScorecards: React.FC<Props> = ({ tournamentId, onClose }) => {
+  const [groups, setGroups] = useState<Group[]>([]);
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [loading, setLoading] = useState(true);
   const [showQuota, setShowQuota] = useState(true);
 
   useEffect(() => {
     loadData();
-  }, [groupId]);
+  }, [tournamentId]);
 
   const loadData = async () => {
     try {
@@ -58,42 +57,50 @@ const PrintableScorecard: React.FC<PrintableScorecardProps> = ({ groupId, onClos
       if (tournamentError) throw tournamentError;
       setTournament(tournamentData);
 
-      const { data: groupData, error: groupError } = await supabase
+      const { data: groupsData, error: groupsError } = await supabase
         .from('groups')
         .select('id, number, starting_hole, starting_position, tee_time')
-        .eq('id', groupId)
-        .single();
+        .eq('tournament_id', tournamentId)
+        .order('number');
 
-      if (groupError) throw groupError;
+      if (groupsError) throw groupsError;
 
-      const { data: groupPlayersData, error: gpError } = await supabase
-        .from('group_players')
-        .select(`
-          position,
-          players (
-            id,
-            name,
-            quota,
-            handicap
-          )
-        `)
-        .eq('group_id', groupId)
-        .order('position');
+      if (groupsData && groupsData.length > 0) {
+        const { data: groupPlayersData, error: gpError } = await supabase
+          .from('group_players')
+          .select(`
+            group_id,
+            position,
+            players (
+              id,
+              name,
+              quota,
+              handicap
+            )
+          `)
+          .in('group_id', groupsData.map(g => g.id))
+          .order('position');
 
-      if (gpError) throw gpError;
+        if (gpError) throw gpError;
 
-      const players = (groupPlayersData || []).map((gp: any) => ({
-        id: gp.players.id,
-        name: gp.players.name,
-        quota: gp.players.quota,
-        handicap: gp.players.handicap
-      }));
+        const groupsWithPlayers = groupsData.map(group => {
+          const groupPlayers = (groupPlayersData || [])
+            .filter(gp => gp.group_id === group.id)
+            .map((gp: any) => ({
+              id: gp.players.id,
+              name: gp.players.name,
+              quota: gp.players.quota,
+              handicap: gp.players.handicap
+            }));
 
-      setGroup({ ...groupData, players });
+          return { ...group, players: groupPlayers };
+        });
 
+        setGroups(groupsWithPlayers);
+      }
     } catch (error: any) {
-      console.error('Error loading scorecard data:', error);
-      alert(`Failed to load scorecard data: ${error.message}`);
+      console.error('Error loading data:', error);
+      alert(`Failed to load data: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -107,17 +114,17 @@ const PrintableScorecard: React.FC<PrintableScorecardProps> = ({ groupId, onClos
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white p-8 rounded-lg">
-          <p>Loading scorecard...</p>
+          <p>Loading all scorecards...</p>
         </div>
       </div>
     );
   }
 
-  if (!group || !tournament || !tournament.course_par) {
+  if (!tournament) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white p-8 rounded-lg">
-          <p className="text-red-600">Error: Missing data</p>
+          <p className="text-red-600">Error: Tournament not found</p>
           <button onClick={onClose} className="mt-4 px-4 py-2 bg-gray-600 text-white rounded-lg">Close</button>
         </div>
       </div>
@@ -130,44 +137,12 @@ const PrintableScorecard: React.FC<PrintableScorecardProps> = ({ groupId, onClos
   const frontTotal = frontNinePar.reduce((a, b) => a + b, 0);
   const backTotal = backNinePar.reduce((a, b) => a + b, 0);
   const totalPar = frontTotal + backTotal;
-  const isShotgun = !!group.starting_hole;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  const ScorecardPage: React.FC<{ group: Group }> = ({ group }) => {
+    const isShotgun = !!group.starting_hole;
 
-      {/* Tip Banner */}
-      <div className="print:hidden absolute top-4 left-4 bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded-lg text-sm z-50">
-        💡 When dialog opens, set Destination to <strong>"Save as PDF"</strong>
-      </div>
-
-      {/* Screen Controls */}
-      <div className="absolute top-4 right-4 flex gap-2 print:hidden z-50">
-        <label className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow">
-          <input
-            type="checkbox"
-            checked={showQuota}
-            onChange={(e) => setShowQuota(e.target.checked)}
-            className="w-4 h-4"
-          />
-          <span className="text-sm font-medium">Show {showQuota ? 'Quota' : 'Handicap'}</span>
-        </label>
-        <button
-          onClick={handleSaveAsPDF}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          Save as PDF
-        </button>
-        <button
-          onClick={onClose}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-        >
-          <X className="w-4 h-4" />
-          Close
-        </button>
-      </div>
-
-      {/* Scorecard */}
-      <div className="bg-white w-full max-w-7xl max-h-[90vh] overflow-auto print:max-h-none print:overflow-visible">
+    return (
+      <div className="scorecard-page bg-white">
         <div className="p-6 print:p-3">
 
           {/* Header */}
@@ -263,7 +238,7 @@ const PrintableScorecard: React.FC<PrintableScorecardProps> = ({ groupId, onClos
           <div className="flex items-center justify-between gap-6">
             <div className="flex-1 flex justify-center items-center" style={{height: '100px'}}>
               {tournament.sponsor_logo_url ? (
-                <img src={tournament.sponsor_logo_url} alt="Sponsor" className="max-h-20 max-w-full object-contain print:max-h-16" />
+                <img src={tournament.sponsor_logo_url} alt="Sponsor" className="max-h-20 max-w-full object-contain" />
               ) : (
                 <div className="text-xs text-gray-400">Sponsor Logo</div>
               )}
@@ -271,7 +246,7 @@ const PrintableScorecard: React.FC<PrintableScorecardProps> = ({ groupId, onClos
             <div className="text-center flex flex-col items-center justify-center" style={{width: '140px'}}>
               {tournament.tournament_qr_code ? (
                 <>
-                  <p className="text-xs font-semibold mb-1 print:text-[10px]">Scan to Score</p>
+                  <p className="text-xs font-semibold mb-1">Scan to Score</p>
                   <img src={tournament.tournament_qr_code} alt="Scoring QR Code" className="w-24 h-24" />
                 </>
               ) : (
@@ -282,7 +257,7 @@ const PrintableScorecard: React.FC<PrintableScorecardProps> = ({ groupId, onClos
             </div>
             <div className="flex-1 flex justify-center items-center" style={{height: '100px'}}>
               {tournament.sponsor_logo_2_url ? (
-                <img src={tournament.sponsor_logo_2_url} alt="Sponsor" className="max-h-20 max-w-full object-contain print:max-h-16" />
+                <img src={tournament.sponsor_logo_2_url} alt="Sponsor" className="max-h-20 max-w-full object-contain" />
               ) : (
                 <div className="text-xs text-gray-400">Sponsor Logo</div>
               )}
@@ -291,12 +266,68 @@ const PrintableScorecard: React.FC<PrintableScorecardProps> = ({ groupId, onClos
 
         </div>
       </div>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+
+      {/* Tip Banner */}
+      <div className="print:hidden absolute top-4 left-4 bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded-lg text-sm z-50">
+        💡 When dialog opens, set Destination to <strong>"Save as PDF"</strong>
+      </div>
+
+      {/* Screen Controls */}
+      <div className="absolute top-4 right-4 flex gap-2 print:hidden z-50">
+        <label className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow">
+          <input
+            type="checkbox"
+            checked={showQuota}
+            onChange={(e) => setShowQuota(e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span className="text-sm font-medium">Show {showQuota ? 'Quota' : 'Handicap'}</span>
+        </label>
+        <div className="bg-white px-4 py-2 rounded-lg shadow text-sm font-medium text-gray-700">
+          {groups.length} Scorecards
+        </div>
+        <button
+          onClick={handleSaveAsPDF}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          Save All as PDF
+        </button>
+        <button
+          onClick={onClose}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+        >
+          <X className="w-4 h-4" />
+          Close
+        </button>
+      </div>
+
+      {/* All Scorecards */}
+      <div className="bg-gray-100 w-full max-w-7xl max-h-[90vh] overflow-auto print:max-h-none print:overflow-visible print:bg-white">
+        {groups.map((group, index) => (
+          <div key={group.id}>
+            <ScorecardPage group={group} />
+            {index < groups.length - 1 && (
+              <div className="print:hidden border-t-4 border-dashed border-gray-400 my-2 mx-6" />
+            )}
+          </div>
+        ))}
+      </div>
 
       <style>{`
         @media print {
           body * { visibility: hidden; }
-          .print\\:block, .print\\:block * { visibility: visible; }
+          .scorecard-page, .scorecard-page * { visibility: visible; }
           .print\\:hidden { display: none !important; }
+          .scorecard-page {
+            page-break-after: always;
+            position: relative;
+            width: 100%;
+          }
           @page { size: letter landscape; margin: 0.25in 0.5in; }
           body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
         }
@@ -305,4 +336,4 @@ const PrintableScorecard: React.FC<PrintableScorecardProps> = ({ groupId, onClos
   );
 };
 
-export default PrintableScorecard;
+export default PrintableAllScorecards;
