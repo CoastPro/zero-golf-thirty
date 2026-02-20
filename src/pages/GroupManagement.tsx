@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Users, ArrowRight, Trash2, Clock, Target, QrCode, Link2, Check, Printer, FileText, Edit2, X, Lock, Unlock } from 'lucide-react';
+import { Plus, Users, ArrowRight, Trash2, Clock, Target, QrCode, Download, Link2, Check, Printer, FileText, Edit2, X, Lock, Unlock } from 'lucide-react';
 import QRCode from 'qrcode';
 import { supabase } from '../lib/supabase';
 import { Player, Group, Tournament } from '../types/database.types';
@@ -341,7 +341,6 @@ export default function GroupManagement() {
         .eq('id', id);
 
       if (error) throw error;
-
       loadData();
       alert('QR Code generated successfully!');
     } catch (error) {
@@ -350,6 +349,14 @@ export default function GroupManagement() {
     } finally {
       setGeneratingQR(null);
     }
+  };
+
+  const downloadQRCode = () => {
+    if (!tournament?.tournament_qr_code) return;
+    const link = document.createElement('a');
+    link.href = tournament.tournament_qr_code;
+    link.download = `${tournament.name}-qr-code.png`;
+    link.click();
   };
 
   const copyLoginLink = async () => {
@@ -431,7 +438,8 @@ export default function GroupManagement() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">{tournament.name}</h2>
           <p className="text-gray-600 mt-1">
@@ -443,6 +451,25 @@ export default function GroupManagement() {
             </p>
           )}
         </div>
+
+        {/* Tournament QR Code - shows at top right once generated */}
+        {tournament.tournament_qr_code && (
+          <div className="flex flex-col items-center bg-white rounded-lg shadow p-4 gap-2">
+            <p className="text-sm font-semibold text-gray-700">Tournament Login QR Code</p>
+            <img
+              src={tournament.tournament_qr_code}
+              alt="Tournament QR Code"
+              className="w-32 h-32"
+            />
+            <button
+              onClick={downloadQRCode}
+              className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Download QR Code
+            </button>
+          </div>
+        )}
       </div>
 
       {groups.length === 0 ? (
@@ -698,7 +725,7 @@ export default function GroupManagement() {
                     <button
                       onClick={() => setPrintScorecardGroupId(group.id)}
                       className="p-2 bg-orange-600 hover:bg-orange-700 rounded transition-colors"
-                      title="Print Scorecard"
+                      title="Save Scorecard as PDF"
                     >
                       <Printer className="w-4 h-4" />
                     </button>
@@ -723,6 +750,7 @@ export default function GroupManagement() {
                     <button
                       onClick={() => deleteGroup(group.id, group.number)}
                       className="p-2 hover:bg-green-700 rounded transition-colors"
+                      title="Delete Group"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -822,6 +850,7 @@ export default function GroupManagement() {
             ))}
           </div>
 
+          {/* Bottom Action Buttons */}
           <div className="mt-6 flex flex-wrap justify-between items-center gap-3">
             <div className="flex flex-wrap gap-2">
               <button
