@@ -119,126 +119,119 @@ const PrintableAllScorecards: React.FC<Props> = ({ tournamentId, onClose }) => {
       : group.tee_time || '';
 
     const frontHeaders = frontNinePar.map((_, i) =>
-      `<th style="border:1px solid #1f2937;padding:2px 1px;text-align:center;width:28px;font-size:10px;">${i + 1}</th>`
+      `<th style="border:1px solid #1f2937;padding:2px 1px;text-align:center;width:26px;font-size:9px;">${i + 1}</th>`
     ).join('');
 
     const backHeaders = backNinePar.map((_, i) =>
-      `<th style="border:1px solid #1f2937;padding:2px 1px;text-align:center;width:28px;font-size:10px;">${i + 10}</th>`
+      `<th style="border:1px solid #1f2937;padding:2px 1px;text-align:center;width:26px;font-size:9px;">${i + 10}</th>`
     ).join('');
 
     const frontParCells = frontNinePar.map(par =>
-      `<td style="border:1px solid #1f2937;padding:2px 1px;text-align:center;background:#fef9c3;font-weight:bold;font-size:10px;">${par}</td>`
+      `<td style="border:1px solid #1f2937;padding:2px 1px;text-align:center;background:#fef9c3;font-weight:bold;font-size:9px;">${par}</td>`
     ).join('');
 
     const backParCells = backNinePar.map(par =>
-      `<td style="border:1px solid #1f2937;padding:2px 1px;text-align:center;background:#fef9c3;font-weight:bold;font-size:10px;">${par}</td>`
+      `<td style="border:1px solid #1f2937;padding:2px 1px;text-align:center;background:#fef9c3;font-weight:bold;font-size:9px;">${par}</td>`
     ).join('');
 
     const playerRows = group.players.map(player => {
       const frontCells = Array(9).fill(0).map(() =>
-        `<td style="border:1px solid #1f2937;padding:0;height:28px;"></td>`
+        `<td style="border:1px solid #1f2937;padding:0;height:24px;width:26px;"></td>`
       ).join('');
       const backCells = Array(9).fill(0).map(() =>
-        `<td style="border:1px solid #1f2937;padding:0;height:28px;"></td>`
+        `<td style="border:1px solid #1f2937;padding:0;height:24px;width:26px;"></td>`
       ).join('');
 
       return `
         <tr>
-          <td style="border:1px solid #1f2937;padding:2px 4px;font-weight:600;font-size:10px;max-width:80px;overflow:hidden;white-space:nowrap;">${player.name}</td>
-          <td style="border:1px solid #1f2937;padding:2px 1px;text-align:center;font-size:10px;">${useQuota ? player.quota : player.handicap}</td>
+          <td style="border:1px solid #1f2937;padding:2px 4px;font-weight:600;font-size:9px;width:80px;overflow:hidden;white-space:nowrap;">${player.name}</td>
+          <td style="border:1px solid #1f2937;padding:2px 1px;text-align:center;font-size:9px;width:20px;">${useQuota ? player.quota : player.handicap}</td>
           ${frontCells}
-          <td style="border:1px solid #1f2937;padding:2px;background:#f3f4f6;"></td>
+          <td style="border:1px solid #1f2937;padding:2px;background:#f3f4f6;width:28px;"></td>
           ${backCells}
-          <td style="border:1px solid #1f2937;padding:2px;background:#f3f4f6;"></td>
-          <td style="border:1px solid #1f2937;padding:2px;background:#e5e7eb;"></td>
+          <td style="border:1px solid #1f2937;padding:2px;background:#f3f4f6;width:28px;"></td>
+          <td style="border:1px solid #1f2937;padding:2px;background:#e5e7eb;width:32px;"></td>
         </tr>
       `;
     }).join('');
 
     const qrSection = t.tournament_qr_code
-      ? `<div style="text-align:center;display:flex;flex-direction:column;align-items:center;">
-           <p style="font-size:10px;font-weight:600;margin:0 0 2px 0;">Scan to Score</p>
-           <img src="${t.tournament_qr_code}" style="width:80px;height:80px;" />
+      ? `<div style="display:flex;flex-direction:column;align-items:center;">
+           <p style="font-size:9px;font-weight:600;margin:0 0 2px 0;">Scan to Score</p>
+           <img src="${t.tournament_qr_code}" style="width:70px;height:70px;" />
          </div>`
-      : `<div style="width:80px;height:80px;border:2px dashed #d1d5db;display:flex;align-items:center;justify-content:center;">
-           <span style="font-size:9px;color:#9ca3af;text-align:center;">No QR Code</span>
+      : `<div style="width:70px;height:70px;border:2px dashed #d1d5db;display:flex;align-items:center;justify-content:center;">
+           <span style="font-size:8px;color:#9ca3af;text-align:center;">No QR</span>
          </div>`;
 
     const leftLogo = t.sponsor_logo_url
-      ? `<img src="${t.sponsor_logo_url}" style="max-height:70px;max-width:100%;object-fit:contain;" />`
-      : `<span style="font-size:10px;color:#9ca3af;">Sponsor Logo</span>`;
+      ? `<img src="${t.sponsor_logo_url}" style="max-height:60px;max-width:160px;object-fit:contain;" />`
+      : '';
 
     const rightLogo = t.sponsor_logo_2_url
-      ? `<img src="${t.sponsor_logo_2_url}" style="max-height:70px;max-width:100%;object-fit:contain;" />`
-      : `<span style="font-size:10px;color:#9ca3af;">Sponsor Logo</span>`;
+      ? `<img src="${t.sponsor_logo_2_url}" style="max-height:60px;max-width:160px;object-fit:contain;" />`
+      : '';
 
     const tournamentLogo = t.logo_url
-      ? `<img src="${t.logo_url}" style="height:48px;object-fit:contain;" />`
+      ? `<img src="${t.logo_url}" style="height:40px;object-fit:contain;" />`
       : '';
 
     const instructions = t.player_instructions
-      ? `<div style="text-align:center;margin-bottom:6px;">
-           <p style="font-size:10px;color:#374151;margin:0;">${t.player_instructions}</p>
-         </div>`
+      ? `<p style="font-size:9px;color:#374151;text-align:center;margin:4px 0;">${t.player_instructions}</p>`
       : '';
 
     return `
-      <div style="padding:12px 16px;background:white;box-sizing:border-box;height:49%;overflow:hidden;">
+      <div style="padding:10px 14px;background:white;box-sizing:border-box;">
 
-        <!-- Header -->
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;padding-bottom:8px;border-bottom:2px solid #16a34a;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding-bottom:6px;border-bottom:2px solid #16a34a;">
           <div style="flex:1;">
-            <div style="font-size:13px;font-weight:bold;color:#111827;">${t.name}</div>
-            <div style="font-size:11px;color:#374151;">${t.course_name || ''}</div>
+            <div style="font-size:12px;font-weight:bold;color:#111827;">${t.name}</div>
+            <div style="font-size:10px;color:#374151;">${t.course_name || ''}</div>
           </div>
           <div style="flex:1;text-align:center;">
-            <div style="font-size:12px;font-weight:600;color:#111827;">${startInfo}</div>
+            <div style="font-size:11px;font-weight:600;color:#111827;">${startInfo}</div>
           </div>
           <div style="flex:1;display:flex;justify-content:flex-end;align-items:center;">
             ${tournamentLogo}
           </div>
         </div>
 
-        <!-- Scorecard Table -->
-        <div style="margin-bottom:6px;">
-          <table style="width:100%;border-collapse:collapse;border:2px solid #1f2937;">
-            <thead>
-              <tr style="background:#16a34a;color:white;">
-                <th style="border:1px solid #1f2937;padding:2px 4px;text-align:left;width:80px;font-size:10px;">Player</th>
-                <th style="border:1px solid #1f2937;padding:2px 1px;text-align:center;width:22px;font-size:10px;">${useQuota ? 'Q' : 'H'}</th>
-                ${frontHeaders}
-                <th style="border:1px solid #1f2937;padding:2px 1px;text-align:center;width:30px;font-size:10px;background:#15803d;">OUT</th>
-                ${backHeaders}
-                <th style="border:1px solid #1f2937;padding:2px 1px;text-align:center;width:30px;font-size:10px;background:#15803d;">IN</th>
-                <th style="border:1px solid #1f2937;padding:2px 1px;text-align:center;width:34px;font-size:10px;background:#15803d;">TOT</th>
-              </tr>
-              <tr style="background:#fef9c3;">
-                <td style="border:1px solid #1f2937;padding:2px 4px;font-weight:bold;font-size:10px;">PAR</td>
-                <td style="border:1px solid #1f2937;"></td>
-                ${frontParCells}
-                <td style="border:1px solid #1f2937;padding:2px 1px;text-align:center;font-weight:bold;font-size:10px;background:#fef08a;">${frontTotal}</td>
-                ${backParCells}
-                <td style="border:1px solid #1f2937;padding:2px 1px;text-align:center;font-weight:bold;font-size:10px;background:#fef08a;">${backTotal}</td>
-                <td style="border:1px solid #1f2937;padding:2px 1px;text-align:center;font-weight:bold;font-size:10px;background:#fde047;">${totalPar}</td>
-              </tr>
-            </thead>
-            <tbody>
-              ${playerRows}
-            </tbody>
-          </table>
-        </div>
+        <table style="width:100%;border-collapse:collapse;border:2px solid #1f2937;margin-bottom:6px;">
+          <thead>
+            <tr style="background:#16a34a;color:white;">
+              <th style="border:1px solid #1f2937;padding:2px 4px;text-align:left;width:80px;font-size:9px;">Player</th>
+              <th style="border:1px solid #1f2937;padding:2px 1px;text-align:center;width:20px;font-size:9px;">${useQuota ? 'Q' : 'H'}</th>
+              ${frontHeaders}
+              <th style="border:1px solid #1f2937;padding:2px 1px;text-align:center;width:28px;font-size:9px;background:#15803d;">OUT</th>
+              ${backHeaders}
+              <th style="border:1px solid #1f2937;padding:2px 1px;text-align:center;width:28px;font-size:9px;background:#15803d;">IN</th>
+              <th style="border:1px solid #1f2937;padding:2px 1px;text-align:center;width:32px;font-size:9px;background:#15803d;">TOT</th>
+            </tr>
+            <tr style="background:#fef9c3;">
+              <td style="border:1px solid #1f2937;padding:2px 4px;font-weight:bold;font-size:9px;">PAR</td>
+              <td style="border:1px solid #1f2937;"></td>
+              ${frontParCells}
+              <td style="border:1px solid #1f2937;padding:2px 1px;text-align:center;font-weight:bold;font-size:9px;background:#fef08a;">${frontTotal}</td>
+              ${backParCells}
+              <td style="border:1px solid #1f2937;padding:2px 1px;text-align:center;font-weight:bold;font-size:9px;background:#fef08a;">${backTotal}</td>
+              <td style="border:1px solid #1f2937;padding:2px 1px;text-align:center;font-weight:bold;font-size:9px;background:#fde047;">${totalPar}</td>
+            </tr>
+          </thead>
+          <tbody>
+            ${playerRows}
+          </tbody>
+        </table>
 
         ${instructions}
 
-        <!-- Bottom: Sponsors + QR -->
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
-          <div style="flex:1;display:flex;justify-content:center;align-items:center;height:80px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="flex:1;display:flex;justify-content:center;align-items:center;height:75px;">
             ${leftLogo}
           </div>
-          <div style="width:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100px;">
             ${qrSection}
           </div>
-          <div style="flex:1;display:flex;justify-content:center;align-items:center;height:80px;">
+          <div style="flex:1;display:flex;justify-content:center;align-items:center;height:75px;">
             ${rightLogo}
           </div>
         </div>
@@ -258,10 +251,13 @@ const PrintableAllScorecards: React.FC<Props> = ({ tournamentId, onClose }) => {
 
     const allScorecardsHTML = groups.map((group, index) => {
       const card = buildScorecardHTML(group, tournament, showQuota);
-      const pageBreak = (index % 2 === 1 && index < groups.length - 1)
-        ? `<div style="page-break-after:always;"></div>`
+      const divider = (index % 2 === 0 && index < groups.length - 1)
+        ? `<div style="border-top:2px dashed #9ca3af;margin:6px 0;"></div>`
         : '';
-      return card + pageBreak;
+      const pageBreak = (index % 2 === 1 && index < groups.length - 1)
+        ? `<div style="page-break-after:always;break-after:page;"></div>`
+        : '';
+      return card + divider + pageBreak;
     }).join('');
 
     printWindow.document.write(`
@@ -298,7 +294,7 @@ const PrintableAllScorecards: React.FC<Props> = ({ tournamentId, onClose }) => {
       setTimeout(() => {
         printWindow.print();
         printWindow.close();
-      }, 1000);
+      }, 1500);
     };
   };
 
@@ -333,12 +329,10 @@ const PrintableAllScorecards: React.FC<Props> = ({ tournamentId, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
 
-      {/* Tip Banner */}
       <div className="absolute top-4 left-4 bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded-lg text-sm z-50">
         💡 A new window will open - set Destination to <strong>"Save as PDF"</strong> · Margins: <strong>None</strong>
       </div>
 
-      {/* Screen Controls */}
       <div className="absolute top-4 right-4 flex gap-2 z-50">
         <label className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow">
           <input
@@ -377,7 +371,6 @@ const PrintableAllScorecards: React.FC<Props> = ({ tournamentId, onClose }) => {
 
           return (
             <div key={group.id} className="bg-white mx-4 my-2 p-4 rounded-lg shadow">
-              {/* Preview Header */}
               <div className="flex items-start justify-between mb-2 pb-2 border-b-2 border-green-600">
                 <div className="flex-1">
                   <h1 className="text-base font-bold text-gray-900">{tournament.name}</h1>
@@ -393,7 +386,6 @@ const PrintableAllScorecards: React.FC<Props> = ({ tournamentId, onClose }) => {
                 </div>
               </div>
 
-              {/* Preview Table */}
               <div className="mb-2 overflow-x-auto">
                 <table className="w-full border-collapse border-2 border-gray-800 text-xs">
                   <thead>
@@ -444,7 +436,6 @@ const PrintableAllScorecards: React.FC<Props> = ({ tournamentId, onClose }) => {
                 </table>
               </div>
 
-              {/* Preview Bottom */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 flex justify-center" style={{height: '70px'}}>
                   {tournament.sponsor_logo_url
