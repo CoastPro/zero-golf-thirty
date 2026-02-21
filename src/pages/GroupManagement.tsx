@@ -914,13 +914,12 @@ export default function GroupManagement() {
         />
       )}
 
-      {printScorecardGroupId === 'all' && (
-        <PrintableAllScorecards
-          tournamentId={id!}
-          onClose={() => setPrintScorecardGroupId(null)}
-        />
-      )}
-
+{printScorecardGroupId === 'all' && (
+  <PrintableAllScorecards
+    tournamentId={id!}
+    onClose={() => setPrintScorecardGroupId(null)}
+  />
+)}
       {printPlacardGroupId && (
         <PrintableCartPlacard
           groupId={printPlacardGroupId}
