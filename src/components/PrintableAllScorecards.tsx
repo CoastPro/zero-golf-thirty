@@ -114,9 +114,9 @@ const PrintableAllScorecards: React.FC<Props> = ({ tournamentId, onClose }) => {
     const totalPar = frontTotal + backTotal;
     const isShotgun = !!group.starting_hole;
 
-    const startInfo = isShotgun
-      ? `Hole ${group.starting_hole}${group.starting_position ? ` (Tee ${group.starting_position})` : ''}`
-      : group.tee_time || '';
+const startInfo = isShotgun
+  ? `Hole ${group.starting_hole}${group.starting_position ? ` ${group.starting_position}` : ''}`
+  : group.tee_time || '';
 
     const frontHeaders = frontNinePar.map((_, i) =>
       `<th style="border:1px solid #1f2937;padding:2px 1px;text-align:center;width:26px;font-size:9px;">${i + 1}</th>`
@@ -365,9 +365,9 @@ const PrintableAllScorecards: React.FC<Props> = ({ tournamentId, onClose }) => {
       <div className="bg-gray-100 w-full max-w-4xl max-h-[90vh] overflow-auto">
         {groups.map((group, index) => {
           const isShotgun = !!group.starting_hole;
-          const startInfo = isShotgun
-            ? `Hole ${group.starting_hole}${group.starting_position ? ` (Tee ${group.starting_position})` : ''}`
-            : group.tee_time || '';
+const startInfo = isShotgun
+  ? `Hole ${group.starting_hole}${group.starting_position ? ` ${group.starting_position}` : ''}`
+  : group.tee_time || '';
 
           return (
             <div key={group.id} className="bg-white mx-4 my-2 p-4 rounded-lg shadow">
