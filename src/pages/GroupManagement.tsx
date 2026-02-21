@@ -7,6 +7,7 @@ import { Player, Group, Tournament } from '../types/database.types';
 import PrintableScorecard from '../components/PrintableScorecard';
 import PrintableCartPlacard from '../components/PrintableCartPlacard';
 import PrintableAllScorecards from '../components/PrintableAllScorecards';
+import PrintableAllPlacards from '../components/PrintableAllPlacards';
 
 interface GroupWithPlayers extends Group {
   players: (Player & { position: number; cart_number: number | null })[];
@@ -33,6 +34,7 @@ export default function GroupManagement() {
   const [printPlacardGroupId, setPrintPlacardGroupId] = useState<string | null>(null);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editingGroupNumber, setEditingGroupNumber] = useState<number>(0);
+  const [printAllPlacards, setPrintAllPlacards] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -891,6 +893,13 @@ export default function GroupManagement() {
               >
                 <Printer className="w-5 h-5" />
                 Save All Scorecards as PDF
+<button
+  onClick={() => setPrintAllPlacards(true)}
+  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+>
+  <FileText className="w-5 h-5" />
+  Save All Placards as PDF
+</button>
               </button>
             </div>
 
@@ -918,6 +927,12 @@ export default function GroupManagement() {
   <PrintableAllScorecards
     tournamentId={id!}
     onClose={() => setPrintScorecardGroupId(null)}
+  />
+)}
+{printAllPlacards && (
+  <PrintableAllPlacards
+    tournamentId={id!}
+    onClose={() => setPrintAllPlacards(false)}
   />
 )}
     </div>
