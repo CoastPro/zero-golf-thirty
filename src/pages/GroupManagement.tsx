@@ -920,12 +920,6 @@ export default function GroupManagement() {
     onClose={() => setPrintScorecardGroupId(null)}
   />
 )}
-      {printPlacardGroupId && (
-        <PrintableCartPlacard
-          groupId={printPlacardGroupId}
-          onClose={() => setPrintPlacardGroupId(null)}
-        />
-      )}
     </div>
   );
 }
