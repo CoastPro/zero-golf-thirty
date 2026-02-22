@@ -8,6 +8,7 @@ import PrintableScorecard from '../components/PrintableScorecard';
 import PrintableCartPlacard from '../components/PrintableCartPlacard';
 import PrintableAllScorecards from '../components/PrintableAllScorecards';
 import PrintableAllPlacards from '../components/PrintableAllPlacards';
+import PrintableGroupings from '../components/PrintableGroupings';
 
 interface GroupWithPlayers extends Group {
   players: (Player & { position: number; cart_number: number | null })[];
@@ -35,6 +36,7 @@ export default function GroupManagement() {
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editingGroupNumber, setEditingGroupNumber] = useState<number>(0);
   const [printAllPlacards, setPrintAllPlacards] = useState(false);
+  const [printGroupings, setPrintGroupings] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -454,7 +456,7 @@ export default function GroupManagement() {
           )}
         </div>
 
-        {/* Tournament QR Code - shows at top right once generated */}
+        {/* Tournament QR Code */}
         {tournament.tournament_qr_code && (
           <div className="flex flex-col items-center bg-white rounded-lg shadow p-4 gap-2">
             <p className="text-sm font-semibold text-gray-700">Tournament Login QR Code</p>
@@ -893,13 +895,22 @@ export default function GroupManagement() {
               >
                 <Printer className="w-5 h-5" />
                 Save All Scorecards as PDF
-<button
-  onClick={() => setPrintAllPlacards(true)}
-  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
->
-  <FileText className="w-5 h-5" />
-  Save All Placards as PDF
-</button>
+              </button>
+
+              <button
+                onClick={() => setPrintAllPlacards(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+              >
+                <FileText className="w-5 h-5" />
+                Save All Placards as PDF
+              </button>
+
+              <button
+                onClick={() => setPrintGroupings(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors"
+              >
+                <FileText className="w-5 h-5" />
+                Save Groupings as PDF
               </button>
             </div>
 
@@ -923,18 +934,33 @@ export default function GroupManagement() {
         />
       )}
 
-{printScorecardGroupId === 'all' && (
-  <PrintableAllScorecards
-    tournamentId={id!}
-    onClose={() => setPrintScorecardGroupId(null)}
-  />
-)}
-{printAllPlacards && (
-  <PrintableAllPlacards
-    tournamentId={id!}
-    onClose={() => setPrintAllPlacards(false)}
-  />
-)}
+      {printScorecardGroupId === 'all' && (
+        <PrintableAllScorecards
+          tournamentId={id!}
+          onClose={() => setPrintScorecardGroupId(null)}
+        />
+      )}
+
+      {printPlacardGroupId && (
+        <PrintableCartPlacard
+          groupId={printPlacardGroupId}
+          onClose={() => setPrintPlacardGroupId(null)}
+        />
+      )}
+
+      {printAllPlacards && (
+        <PrintableAllPlacards
+          tournamentId={id!}
+          onClose={() => setPrintAllPlacards(false)}
+        />
+      )}
+
+      {printGroupings && (
+        <PrintableGroupings
+          tournamentId={id!}
+          onClose={() => setPrintGroupings(false)}
+        />
+      )}
     </div>
   );
-} 
+}
