@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { RefreshCw, Trophy, Edit, Menu as MenuIcon } from 'lucide-react';
+import { Trophy, Edit, Menu as MenuIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Player, Score, Tournament } from '../types/database.types';
 import { buildLeaderboard, buildSkinsLeaderboard, formatVsPar, formatHolesPlayed, assignRanks, assignStablefordRanks } from '../lib/calculations';
@@ -53,6 +53,7 @@ export default function Leaderboard() {
         .order('name');
       if (playersError) throw playersError;
       setPlayers(playersData || []);
+      console.log('Players loaded:', playersData?.length);
 
       if (playersData && playersData.length > 0) {
         const { data: scoresData, error: scoresError } = await supabase
@@ -62,14 +63,14 @@ export default function Leaderboard() {
           .limit(5000);
         if (scoresError) throw scoresError;
         setScores(scoresData || []);
+        console.log('Scores loaded:', scoresData?.length);
+        console.log('First score sample:', scoresData?.[0]);
       }
 
-      // Only set activeTab on the very first load
       if (isInitialLoad.current) {
         if (tournamentData.leaderboard_settings) {
           const order = tournamentData.leaderboard_settings.tabs || ['gross', 'stableford', 'skins'];
           const hidden = tournamentData.leaderboard_settings.hidden || [];
-          
           const visibleTabs = order.filter((tab: LeaderboardTab) => !hidden.includes(tab));
           if (visibleTabs.length > 0) {
             setActiveTab(visibleTabs[0]);
@@ -96,14 +97,12 @@ export default function Leaderboard() {
   const visibleTabs = tabOrder.filter(tab => !hiddenTabs.includes(tab));
   const skinsData = tournament.skins_enabled ? buildSkinsLeaderboard(players, scores, tournament) : null;
 
-  // Apply ranking for Gross standings
   const rankedGrossLeaderboard = assignRanks(
     leaderboard,
     (entry) => entry.vsParGross,
     (entry) => entry.holesPlayed > 0
   );
 
-  // Apply ranking for Stableford standings
   const rankedStablefordLeaderboard = assignStablefordRanks(
     leaderboard,
     (entry) => entry.stablefordPoints,
@@ -111,8 +110,7 @@ export default function Leaderboard() {
     (entry) => entry.holesPlayed > 0
   );
 
-  // Build score link with group parameter if it exists
-  const scoreLink = groupIdParam 
+  const scoreLink = groupIdParam
     ? `/tournament/${id}/score?group=${groupIdParam}`
     : `/tournament/${id}/score`;
 
@@ -141,7 +139,6 @@ export default function Leaderboard() {
             </Link>
           )}
 
-          {/* Menu Button */}
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
@@ -150,7 +147,6 @@ export default function Leaderboard() {
               <MenuIcon className="w-4 h-4" />
             </button>
 
-            {/* Dropdown Menu */}
             {showMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
                 {visibleTabs.map(tab => (
@@ -214,7 +210,7 @@ export default function Leaderboard() {
         </div>
       )}
 
-      {/* Leaderboard Content */}
+      {/* Gross Leaderboard */}
       {activeTab === 'gross' && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
@@ -264,11 +260,14 @@ export default function Leaderboard() {
             </table>
           </div>
           {showNet && (
-            <div className="bg-gray-50 px-2 py-1.5 text-xs text-gray-600 border-t">* Net scores after 18 holes</div>
+            <div className="bg-gray-50 px-2 py-1.5 text-xs text-gray-600 border-t">
+              * Net scores after 18 holes
+            </div>
           )}
         </div>
       )}
 
+      {/* Stableford Leaderboard */}
       {activeTab === 'stableford' && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
@@ -316,6 +315,7 @@ export default function Leaderboard() {
         </div>
       )}
 
+      {/* Skins Leaderboard */}
       {activeTab === 'skins' && skinsData && (
         <div>
           <div className="bg-white rounded-lg shadow p-3 mb-3">
