@@ -14,7 +14,7 @@ export default function PlayerManagement() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedSavedPlayers, setSelectedSavedPlayers] = useState<Set<string>>(new Set());
-  
+
   const [newPlayerName, setNewPlayerName] = useState('');
   const [newPlayerHandicap, setNewPlayerHandicap] = useState(0);
   const [newPlayerFlight, setNewPlayerFlight] = useState('A');
@@ -26,7 +26,6 @@ export default function PlayerManagement() {
   const [editFlight, setEditFlight] = useState('A');
   const [editPhone, setEditPhone] = useState('');
 
-  // Player visibility settings (what PLAYERS see on scoring page)
   const [showFlightToPlayers, setShowFlightToPlayers] = useState(true);
   const [showHandicapToPlayers, setShowHandicapToPlayers] = useState(true);
   const [showQuotaToPlayers, setShowQuotaToPlayers] = useState(true);
@@ -47,7 +46,6 @@ export default function PlayerManagement() {
       if (tournamentError) throw tournamentError;
       setTournament(tournamentData);
 
-      // Load player visibility settings
       if (tournamentData.player_display_settings) {
         setShowFlightToPlayers(tournamentData.player_display_settings.show_flight ?? true);
         setShowHandicapToPlayers(tournamentData.player_display_settings.show_handicap ?? true);
@@ -131,6 +129,15 @@ export default function PlayerManagement() {
     setSelectedSavedPlayers(newSelected);
   };
 
+  const selectAllPlayers = () => {
+    const allIds = new Set(availableSavedPlayers.map(p => p.id));
+    setSelectedSavedPlayers(allIds);
+  };
+
+  const deselectAllPlayers = () => {
+    setSelectedSavedPlayers(new Set());
+  };
+
   const importSelectedPlayers = async () => {
     if (selectedSavedPlayers.size === 0) {
       alert('Please select at least one player');
@@ -144,6 +151,8 @@ export default function PlayerManagement() {
           tournament_id: id,
           name: p.name,
           handicap: p.handicap,
+          quota: p.quota || (36 - p.handicap),
+          phone: p.phone || null,
           flight: tournament?.flights[0] || 'A',
           paid: false,
           in_skins: true
@@ -167,7 +176,7 @@ export default function PlayerManagement() {
 
   const addPlayer = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const { error } = await supabase
         .from('players')
@@ -175,6 +184,7 @@ export default function PlayerManagement() {
           tournament_id: id,
           name: newPlayerName,
           handicap: newPlayerHandicap,
+          quota: 36 - newPlayerHandicap,
           flight: newPlayerFlight,
           phone: newPlayerPhone || null,
           paid: false,
@@ -182,7 +192,7 @@ export default function PlayerManagement() {
         }]);
 
       if (error) throw error;
-      
+
       setNewPlayerName('');
       setNewPlayerHandicap(0);
       setNewPlayerFlight('A');
@@ -218,6 +228,7 @@ export default function PlayerManagement() {
         .update({
           name: editName,
           handicap: editHandicap,
+          quota: 36 - editHandicap,
           flight: editFlight,
           phone: editPhone || null
         })
@@ -283,16 +294,18 @@ export default function PlayerManagement() {
     const csvText = prompt(
       'Paste CSV data (Name, Handicap, Phone):\nExample:\nJohn Smith, 12, 5551234567\nJane Doe, 8, 5559876543'
     );
-    
+
     if (!csvText) return;
 
     const lines = csvText.trim().split('\n');
     const playersToAdd = lines.map(line => {
       const [name, handicap, phone] = line.split(',').map(s => s.trim());
+      const hc = parseInt(handicap) || 0;
       return {
         tournament_id: id,
         name,
-        handicap: parseInt(handicap) || 0,
+        handicap: hc,
+        quota: 36 - hc,
         phone: phone || null,
         flight: 'A',
         paid: false,
@@ -306,7 +319,7 @@ export default function PlayerManagement() {
         .insert(playersToAdd);
 
       if (error) throw error;
-      
+
       alert(`Added ${playersToAdd.length} players`);
       loadData();
     } catch (error: any) {
@@ -347,7 +360,7 @@ export default function PlayerManagement() {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
               <UserPlus className="w-5 h-5" />
-              Import Saved
+              Import Saved ({availableSavedPlayers.length})
             </button>
           )}
           <button
@@ -370,7 +383,7 @@ export default function PlayerManagement() {
       {/* Player Visibility Controls */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg shadow p-4 mb-6">
         <h3 className="text-sm font-semibold text-blue-900 mb-2">🔒 Player Scoring Page Visibility</h3>
-        <p className="text-xs text-blue-700 mb-3">Control what players see on their scoring page (admins always see everything)</p>
+        <p className="text-xs text-blue-700 mb-3">Control what players see on their scoring page</p>
         <div className="flex gap-3">
           <button
             onClick={toggleShowFlightToPlayers}
@@ -408,16 +421,35 @@ export default function PlayerManagement() {
         </div>
       </div>
 
+      {/* Import from Saved Players Modal */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
             <div className="p-6 border-b">
-              <h3 className="text-xl font-bold">Import Saved Players</h3>
+              <h3 className="text-xl font-bold">Import from Player Database</h3>
               <p className="text-sm text-gray-600 mt-1">
                 Select players to add to this tournament
               </p>
             </div>
-            
+
+            <div className="p-4 border-b flex gap-2">
+              <button
+                onClick={selectAllPlayers}
+                className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200"
+              >
+                Select All
+              </button>
+              <button
+                onClick={deselectAllPlayers}
+                className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                Deselect All
+              </button>
+              <span className="text-sm text-gray-600 flex items-center">
+                {selectedSavedPlayers.size} selected
+              </span>
+            </div>
+
             <div className="p-6 overflow-y-auto flex-1">
               {availableSavedPlayers.length === 0 ? (
                 <p className="text-gray-600 text-center py-8">
@@ -439,7 +471,8 @@ export default function PlayerManagement() {
                       <div className="flex-1">
                         <div className="font-medium">{player.name}</div>
                         <div className="text-sm text-gray-600">
-                          Handicap: {player.handicap} | Quota: {36 - player.handicap}
+                          Handicap: {player.handicap} | Quota: {player.quota || (36 - player.handicap)}
+                          {player.phone && ` | Phone: ***-${player.phone.slice(-4)}`}
                         </div>
                       </div>
                     </label>
@@ -470,6 +503,7 @@ export default function PlayerManagement() {
         </div>
       )}
 
+      {/* Add Player Form */}
       {showAddForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4">Add New Player</h3>
@@ -545,6 +579,7 @@ export default function PlayerManagement() {
         </div>
       )}
 
+      {/* Players Table */}
       {players.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg shadow">
           <p className="text-gray-600 mb-4">No players added yet</p>
@@ -587,7 +622,7 @@ export default function PlayerManagement() {
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Flight</th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Paid</th>
                         {tournament.skins_enabled && (
-                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">In Skins</th>
+                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Skins</th>
                         )}
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
                       </tr>
