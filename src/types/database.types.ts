@@ -144,6 +144,8 @@ export interface SavedPlayer {
   id: string;
   name: string;
   handicap: number;
+  quota: number;
+  phone: string | null;
   created_at: string;
   updated_at: string;
 }
