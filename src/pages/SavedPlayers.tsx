@@ -6,7 +6,7 @@ import { SavedPlayer, Tournament } from '../types/database.types';
 
 export default function SavedPlayers() {
   const [players, setPlayers] = useState<SavedPlayer[]>([]);
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [tournaments, setTournaments] = useState<{id: string; name: string; tournament_date: string | null}[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false);
